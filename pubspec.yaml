@@ -1,7 +1,7 @@
 name: duckshooter2
 description: "Duck Shooter 2 Game"
 publish_to: 'none'
-version: 5.0.0+50001
+version: 10.0.0+100001
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
