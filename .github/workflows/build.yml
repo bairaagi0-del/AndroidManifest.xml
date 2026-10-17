@@ -27,9 +27,9 @@ jobs:
 
     - name: Recreate Android Project Structure
       run: |
-        flutter create . --org com.rahulgupta --project-name duckshooter2
+        flutter create . --org com.rahulgupta --project-name duckshooter3d
 
-    - name: Force Stable SDK 34 in android/app/build.gradle
+    - name: Configure Hardcoded SDK and Gradle
       run: |
         cat << 'EOF' > android/app/build.gradle
         plugins {
@@ -39,7 +39,7 @@ jobs:
         }
 
         android {
-            namespace = "com.rahulgupta.duckshooter2"
+            namespace = "com.rahulgupta.duckshooter3d"
             compileSdk = 34
             ndkVersion = flutter.ndkVersion
 
@@ -53,11 +53,11 @@ jobs:
             }
 
             defaultConfig {
-                applicationId = "com.rahulgupta.duckshooter2"
+                applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 40001
-                versionName = "4.0.1"
+                versionCode = 1
+                versionName = "1.0.0"
                 multiDexEnabled = true
             }
 
@@ -90,9 +90,7 @@ jobs:
             html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0502; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
             #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
             canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-            
             .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; background: radial-gradient(circle at 50% 30%, #5a2a18 0%, #200d04 75%, #0c0502 100%); }
-            
             .cookie-board-window { background: #c68642; border: 8px solid #5a2a18; outline: 5px solid #ffbe53; border-radius: 36px; padding: 22px 16px; position: relative; max-width: 92%; box-shadow: 0 12px 30px rgba(0,0,0,0.8); }
             .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 15px; font-weight: 900; padding: 12px 22px; border-radius: 28px; cursor: pointer; box-shadow: 0 6px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
             .cookie-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #7b3200; }
@@ -104,19 +102,15 @@ jobs:
             .stars-cluster { display: flex; justify-content: center; gap: 10px; margin: 8px 0 14px 0; }
             .star-3d { font-size: 38px; opacity: 0.25; filter: grayscale(1); }
             .star-3d.lit { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 16px #facc15) grayscale(0); }
-            
             .gameplay-hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
             .hud-cookie-pill { background: linear-gradient(180deg, #5a2a18 0%, #3a170a 100%); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
             .gameplay-controls { position: absolute; bottom: 18px; left: 14px; right: 14px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
-            
             .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 0 90px 0; display: block; }
             .flow-node-row { width: 100%; height: 90px; position: relative; margin: 10px 0; }
-            
             .level-bubble { width: 66px; height: 66px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3.5px solid #fff5c0; box-shadow: 0 6px 0 #7b3200, 0 8px 18px rgba(0,0,0,0.5); color: #542200; font-weight: 900; position: absolute; transform: translateX(-50%); transition: transform 0.15s ease; }
             .level-bubble:active { transform: translateX(-50%) scale(0.92); }
             .level-bubble.locked { background: linear-gradient(180deg, #64748b 0%, #334155 100%); border-color: #94a3b8; box-shadow: 0 6px 0 #1e293b; color: #cbd5e1; opacity: 0.7; }
             .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 6px 0 #15803d, 0 0 20px #4ade80; }
-
             .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 8px 90px 8px; }
             .hub-card { background: rgba(74, 34, 14, 0.9); border: 3px solid #b45309; border-radius: 20px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
             .hub-card.active-item { border-color: #facc15; background: rgba(120, 53, 15, 0.95); box-shadow: 0 0 16px rgba(250, 204, 21, 0.5); }
@@ -145,10 +139,8 @@ jobs:
                 <button id="tabLevels" class="cookie-btn" style="flex:1; padding:8px 0; font-size:12px;" onclick="switchHub('levels')">🗺️ ISLAND ROAD</button>
                 <button id="tabGuns" class="cookie-btn cookie-btn-blue" style="flex:1; padding:8px 0; font-size:12px;" onclick="switchHub('guns')">🔫 ARMORY</button>
               </div>
-              
               <div id="hubListRoad" class="flow-map-container"></div>
               <div id="hubListArmory" class="armory-grid" style="display:none;"></div>
-
               <div style="position:absolute; bottom:14px; left:16px; right:16px; display:flex; gap:10px;">
                 <button id="btnBackToHome" class="cookie-btn cookie-btn-blue" style="flex:1; padding:10px; font-size:13px;">◀ HOME</button>
                 <button id="btnStartMission" class="cookie-btn cookie-btn-green" style="flex:2; padding:10px; font-size:14px;">START MISSION ▶</button>
@@ -191,7 +183,6 @@ jobs:
           <script>
             let audioCtx = null;
             let isBgmPlaying = false;
-
             function initAudio() {
               if (!audioCtx) {
                 const AudioClass = window.AudioContext || window.webkitAudioContext;
@@ -199,7 +190,6 @@ jobs:
               }
               if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             }
-
             function playTapSound() {
               initAudio();
               if (!audioCtx) return;
@@ -218,7 +208,6 @@ jobs:
                 osc.stop(now + 0.05);
               } catch (e) {}
             }
-
             function startBGM() {
               initAudio();
               if (isBgmPlaying || !audioCtx) return;
@@ -243,13 +232,11 @@ jobs:
                 } catch(e) {}
               }, 200);
             }
-
             function playSound(type) {
               try {
                 initAudio();
                 if (!audioCtx) return;
                 const now = audioCtx.currentTime;
-
                 if (type === 'shoot') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
@@ -313,11 +300,9 @@ jobs:
                 }
               } catch (e) {}
             }
-
             function triggerAdMobInterstitial() {
               try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
             }
-
             function requestRewardedAd() {
               initAudio();
               playTapSound();
@@ -338,13 +323,11 @@ jobs:
                 if (b && b.innerText.includes('LOADING')) b.innerText = '🎬 FREE 100 COINS';
               }, 6000);
             }
-
             window.onAdLoadFailed = function() {
               const b = document.getElementById('btnWatchAd');
               if (b) b.innerText = '🎬 FREE 100 COINS';
               alert('Ad load ho raha hai, kripya 3-4 second baad dobara tap karein!');
             };
-
             window.onRewardedAdReward = function() {
               coins += 100;
               saveState();
