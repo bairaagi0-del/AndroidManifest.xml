@@ -38,13 +38,11 @@ jobs:
 
     - name: Fix Kotlin & Gradle Versions
       run: |
-        # Update Kotlin version in settings.gradle or build.gradle if exists
         find android -name "settings.gradle" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' {} +
         find android -name "build.gradle" -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
 
     - name: Configure AdMob in AndroidManifest
       run: |
-        # Ensure AdMob App ID exists in AndroidManifest.xml
         MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
         if [ -f "$MANIFEST_FILE" ]; then
           if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "$MANIFEST_FILE"; then
@@ -56,7 +54,7 @@ jobs:
       run: flutter pub get
 
     - name: Build Release APK
-      run: flutter build apk --release --no-tree-shake-icons
+      run: flutter build apk --release --no-tree-shake-icons --build-name=2.0.1 --build-number=30401
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
