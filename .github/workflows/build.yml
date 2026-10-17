@@ -29,6 +29,14 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter2
 
+    - name: Set MinSDK 24 for Amazon Compatibility
+      run: |
+        APP_GRADLE="android/app/build.gradle"
+        if [ -f "$APP_GRADLE" ]; then
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/g' "$APP_GRADLE"
+          sed -i 's/minSdkVersion [0-9]\+/minSdkVersion 24/g' "$APP_GRADLE"
+        fi
+
     - name: Create Complete Game Assets & HTML
       run: |
         mkdir -p assets
@@ -44,8 +52,9 @@ jobs:
             html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0502; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
             #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
             canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+            
             .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; background: radial-gradient(circle at 50% 30%, #5a2a18 0%, #200d04 75%, #0c0502 100%); }
-            .screen.hidden { display: none !important; }
+            
             .cookie-board-window { background: #c68642; border: 8px solid #5a2a18; outline: 5px solid #ffbe53; border-radius: 36px; padding: 22px 16px; position: relative; max-width: 92%; box-shadow: 0 12px 30px rgba(0,0,0,0.8); }
             .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 15px; font-weight: 900; padding: 12px 22px; border-radius: 28px; cursor: pointer; box-shadow: 0 6px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
             .cookie-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #7b3200; }
@@ -57,24 +66,25 @@ jobs:
             .stars-cluster { display: flex; justify-content: center; gap: 10px; margin: 8px 0 14px 0; }
             .star-3d { font-size: 38px; opacity: 0.25; filter: grayscale(1); }
             .star-3d.lit { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 16px #facc15) grayscale(0); }
+            
             .gameplay-hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
             .hud-cookie-pill { background: linear-gradient(180deg, #5a2a18 0%, #3a170a 100%); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
             .gameplay-controls { position: absolute; bottom: 18px; left: 14px; right: 14px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
             
-            /* S-CURVE FLOATING ROAD */
-            .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 0 80px 0; display: flex; flex-direction: column-reverse; align-items: center; position: relative; }
-            .flow-node-row { width: 100%; height: 85px; position: relative; display: flex; align-items: center; }
-            .level-bubble { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3.5px solid #fff5c0; box-shadow: 0 6px 0 #7b3200, 0 8px 18px rgba(0,0,0,0.5); color: #542200; font-weight: 900; position: absolute; transform: translateX(-50%); transition: transform 0.15s ease; }
+            /* S-CURVE FLOATING ROAD CONTAINER */
+            .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 0 90px 0; display: block; }
+            .flow-node-row { width: 100%; height: 90px; position: relative; margin: 10px 0; }
+            
+            .level-bubble { width: 66px; height: 66px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3.5px solid #fff5c0; box-shadow: 0 6px 0 #7b3200, 0 8px 18px rgba(0,0,0,0.5); color: #542200; font-weight: 900; position: absolute; transform: translateX(-50%); transition: transform 0.15s ease; }
             .level-bubble:active { transform: translateX(-50%) scale(0.92); }
             .level-bubble.locked { background: linear-gradient(180deg, #64748b 0%, #334155 100%); border-color: #94a3b8; box-shadow: 0 6px 0 #1e293b; color: #cbd5e1; opacity: 0.7; }
-            .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 6px 0 #15803d, 0 0 20px #4ade80; animation: bounceFloat 1.2s infinite alternate; }
-            @keyframes bounceFloat { 0% { transform: translateX(-50%) translateY(0); } 100% { transform: translateX(-50%) translateY(-6px); } }
+            .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 6px 0 #15803d, 0 0 20px #4ade80; }
 
             /* ARMORY WEAPONS GRID */
-            .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 4px 80px 4px; }
+            .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 8px 90px 8px; }
             .hub-card { background: rgba(74, 34, 14, 0.9); border: 3px solid #b45309; border-radius: 20px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
             .hub-card.active-item { border-color: #facc15; background: rgba(120, 53, 15, 0.95); box-shadow: 0 0 16px rgba(250, 204, 21, 0.5); }
-            .hub-card img { width: 110px; height: 60px; object-fit: contain; margin: 8px 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+            .hub-card img { width: 100px; height: 50px; object-fit: contain; margin: 8px 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
           </style>
         </head>
         <body>
@@ -92,7 +102,7 @@ jobs:
             </div>
 
             <!-- HUB / EXPEDITION & ARMORY SCREEN -->
-            <div id="hubScreen" class="screen hidden" style="justify-content: flex-start; padding-top: 14px;">
+            <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px;">
               <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                 <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION MAP</h2>
                 <div style="background:rgba(20,8,3,0.9); border:2px solid #d97706; border-radius:24px; padding:4px 14px; color:#fef08a; font-weight:900;">🪙 <span id="hubCoins">0</span></div>
@@ -103,7 +113,7 @@ jobs:
               </div>
               
               <div id="hubListRoad" class="flow-map-container"></div>
-              <div id="hubListArmory" class="armory-grid hidden"></div>
+              <div id="hubListArmory" class="armory-grid" style="display:none;"></div>
 
               <div style="position:absolute; bottom:14px; left:16px; right:16px; display:flex; gap:10px;">
                 <button id="btnBackToHome" class="cookie-btn cookie-btn-blue" style="flex:1; padding:10px; font-size:13px;">◀ HOME</button>
@@ -127,7 +137,7 @@ jobs:
             <canvas id="gameCanvas" width="720" height="1280"></canvas>
 
             <!-- WIN SCREEN -->
-            <div id="winScreen" class="screen hidden">
+            <div id="winScreen" class="screen" style="display:none;">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner">VICTORY!</div>
                 <div class="stars-cluster"><div id="winStar1" class="star-3d">⭐</div><div id="winStar2" class="star-3d">⭐</div><div id="winStar3" class="star-3d">⭐</div></div>
@@ -137,7 +147,7 @@ jobs:
             </div>
 
             <!-- GAME OVER SCREEN -->
-            <div id="gameOverScreen" class="screen hidden">
+            <div id="gameOverScreen" class="screen" style="display:none;">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner lose">FAILED!</div>
                 <div style="font-size:48px; margin:8px 0;">🦆💨</div>
@@ -148,16 +158,13 @@ jobs:
           </div>
 
           <script>
-            // AUDIO SYNTHESIZER (NO EXTERNAL AUDIO FILES NEEDED)
             let audioCtx = null;
             function initAudio() {
               if (!audioCtx) {
                 const AudioClass = window.AudioContext || window.webkitAudioContext;
                 if (AudioClass) audioCtx = new AudioClass();
               }
-              if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-              }
+              if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             }
 
             function playSound(type) {
@@ -165,7 +172,6 @@ jobs:
                 initAudio();
                 if (!audioCtx) return;
                 const now = audioCtx.currentTime;
-
                 if (type === 'shoot') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
@@ -218,13 +224,8 @@ jobs:
               } catch (e) {}
             }
 
-            // ADMOB COMMUNICATION
             function triggerAdMobInterstitial() {
-              try {
-                if (window.AdMobBridge) {
-                  window.AdMobBridge.postMessage('showInterstitial');
-                }
-              } catch (e) {}
+              try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
             }
 
             function requestRewardedAd() {
@@ -232,28 +233,16 @@ jobs:
               const btn = document.getElementById('btnWatchAd');
               if (btn) btn.innerText = '⏳ LOADING AD...';
               try {
-                if (window.AdMobBridge) {
-                  window.AdMobBridge.postMessage('showRewarded');
-                } else {
-                  alert('Rewarded Ad is only available in the mobile app APK.');
-                  if (btn) btn.innerText = '🎬 FREE 100 COINS';
-                }
-              } catch (e) {
-                if (btn) btn.innerText = '🎬 FREE 100 COINS';
-              }
-              setTimeout(() => {
-                const b = document.getElementById('btnWatchAd');
-                if (b) b.innerText = '🎬 FREE 100 COINS';
-              }, 4000);
+                if (window.AdMobBridge) window.AdMobBridge.postMessage('showRewarded');
+                else { alert('Rewarded Ad mobile app me hi active hai.'); if (btn) btn.innerText = '🎬 FREE 100 COINS'; }
+              } catch (e) { if (btn) btn.innerText = '🎬 FREE 100 COINS'; }
+              setTimeout(() => { const b = document.getElementById('btnWatchAd'); if (b) b.innerText = '🎬 FREE 100 COINS'; }, 4000);
             }
 
             window.onRewardedAdReward = function() {
-              coins += 100;
-              saveState();
-              playSound('win');
+              coins += 100; saveState(); playSound('win');
               alert('🎉 Badhai ho! 100 Coins mil gaye.');
-              const b = document.getElementById('btnWatchAd');
-              if (b) b.innerText = '🎬 FREE 100 COINS';
+              const b = document.getElementById('btnWatchAd'); if (b) b.innerText = '🎬 FREE 100 COINS';
             };
 
             const canvas = document.getElementById('gameCanvas');
@@ -312,33 +301,18 @@ jobs:
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.z * (this.dir < 0 ? -1 : 1), this.z);
-
-                // Body Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
                 ctx.beginPath(); ctx.ellipse(0, 35, 40, 10, 0, 0, Math.PI * 2); ctx.fill();
-
-                // Duck Body
                 ctx.fillStyle = '#f59e0b';
                 ctx.beginPath(); ctx.ellipse(0, 0, this.baseSize, this.baseSize * 0.65, 0, 0, Math.PI * 2); ctx.fill();
-
-                // Wing Flap
                 ctx.fillStyle = '#d97706';
-                ctx.beginPath();
-                ctx.ellipse(-10, Math.sin(this.wing) * 10, 26, 14, -0.2, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Duck Head
+                ctx.beginPath(); ctx.ellipse(-10, Math.sin(this.wing) * 10, 26, 14, -0.2, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#047857';
                 ctx.beginPath(); ctx.arc(36, -18, 22, 0, Math.PI * 2); ctx.fill();
-
-                // Beak
                 ctx.fillStyle = '#ea580c';
                 ctx.beginPath(); ctx.moveTo(50, -16); ctx.lineTo(76, -11); ctx.lineTo(50, -4); ctx.fill();
-
-                // Eye
                 ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(44, -22, 4.5, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(45.5, -22, 2, 0, Math.PI * 2); ctx.fill();
-
                 ctx.restore();
               }
             }
@@ -377,10 +351,10 @@ jobs:
               currentLvl = lvlIndex; levelScore = 0; lives = 3;
               maxAmmo = REAL_GUNS[equippedGun]?.mag || 15; ammo = maxAmmo;
               isReloading = false; ducks = []; particles = []; frame = 0; isRunning = true; recoilY = 0;
-              document.getElementById('homeScreen').classList.add('hidden');
-              document.getElementById('hubScreen').classList.add('hidden');
-              document.getElementById('winScreen').classList.add('hidden');
-              document.getElementById('gameOverScreen').classList.add('hidden');
+              document.getElementById('homeScreen').style.display = 'none';
+              document.getElementById('hubScreen').style.display = 'none';
+              document.getElementById('winScreen').style.display = 'none';
+              document.getElementById('gameOverScreen').style.display = 'none';
               updateHud();
               loop();
             }
@@ -390,7 +364,7 @@ jobs:
               playSound('win');
               if (currentLvl + 1 > maxUnlockedLvl) { maxUnlockedLvl = Math.min(99, currentLvl + 1); saveState(); }
               coins += 35; saveState();
-              document.getElementById('winScreen').classList.remove('hidden');
+              document.getElementById('winScreen').style.display = 'flex';
               document.getElementById('winStar1').classList.add('lit');
               document.getElementById('winStar2').classList.add('lit');
               document.getElementById('winStar3').classList.add('lit');
@@ -399,7 +373,7 @@ jobs:
 
             function endGame() {
               isRunning = false;
-              document.getElementById('gameOverScreen').classList.remove('hidden');
+              document.getElementById('gameOverScreen').style.display = 'flex';
               triggerAdMobInterstitial();
             }
 
@@ -445,18 +419,15 @@ jobs:
               frame++;
               if (recoilY > 0) recoilY -= 2.5;
 
-              // Sky & Lake Background
               ctx.clearRect(0, 0, V_W, V_H);
               const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H * 0.65);
               skyGrad.addColorStop(0, '#0284c7'); skyGrad.addColorStop(1, '#38bdf8');
               ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, V_W, V_H * 0.65);
 
-              // Water surface
               const waterGrad = ctx.createLinearGradient(0, V_H * 0.65, 0, V_H);
               waterGrad.addColorStop(0, '#0369a1'); waterGrad.addColorStop(1, '#082f49');
               ctx.fillStyle = waterGrad; ctx.fillRect(0, V_H * 0.65, V_W, V_H * 0.35);
 
-              // Spawn Ducks
               const cfg = getLevelConfig(currentLvl);
               if (frame % cfg.spawnInterval === 0 && ducks.length < 5) ducks.push(new Duck3D(cfg));
 
@@ -468,25 +439,26 @@ jobs:
                 }
               }
 
-              // Particles
               for (let i = particles.length - 1; i >= 0; i--) {
                 particles[i].update(); particles[i].draw();
                 if (particles[i].alpha <= 0) particles.splice(i, 1);
               }
 
-              // Draw Player Weapon
+              // DRAW GUN AIMING UPWARD (POINTING UPWARDS TO THE SKY)
               const gunImg = gunSprites[equippedGun];
               if (gunImg && gunImg.complete) {
                 ctx.save();
-                ctx.translate(V_W / 2, V_H - 120 + recoilY);
-                ctx.drawImage(gunImg, -80, -40, 160, 80);
+                ctx.translate(V_W / 2, V_H - 90 + recoilY);
+                // Rotate -90 degrees so barrel points directly UP towards the ducks
+                ctx.rotate(-Math.PI / 2);
+                ctx.drawImage(gunImg, -70, -35, 140, 70);
                 ctx.restore();
               }
 
               requestAnimationFrame(loop);
             }
 
-            // S-CURVE FLOATING ROAD & ARMORY RENDER
+            // TABS SWITCHING WITH CLEAN DISPLAY NONE
             window.switchHub = function(tab) {
               const road = document.getElementById('hubListRoad');
               const armory = document.getElementById('hubListArmory');
@@ -494,14 +466,14 @@ jobs:
               const btnArmory = document.getElementById('tabGuns');
 
               if (tab === 'levels') {
-                road.classList.remove('hidden');
-                armory.classList.add('hidden');
+                road.style.display = 'block';
+                armory.style.display = 'none';
                 btnRoad.className = 'cookie-btn';
                 btnArmory.className = 'cookie-btn cookie-btn-blue';
                 renderRoad();
               } else {
-                road.classList.add('hidden');
-                armory.classList.remove('hidden');
+                road.style.display = 'none';
+                armory.style.display = 'grid';
                 btnRoad.className = 'cookie-btn cookie-btn-blue';
                 btnArmory.className = 'cookie-btn';
                 renderArmory();
@@ -514,11 +486,11 @@ jobs:
               for (let i = 0; i < 100; i++) {
                 const row = document.createElement('div');
                 row.className = 'flow-node-row';
-                const offsetPercent = 50 + Math.sin(i * 0.65) * 32;
+                const offsetPercent = 50 + Math.sin(i * 0.7) * 32;
                 const bubble = document.createElement('div');
                 bubble.className = `level-bubble ${i <= maxUnlockedLvl ? '' : 'locked'} ${selectedLevel === i ? 'active-node' : ''}`;
                 bubble.style.left = `${offsetPercent}%`;
-                bubble.innerHTML = `<small style="font-size:9px;">LVL</small><b style="font-size:16px;">${i + 1}</b>`;
+                bubble.innerHTML = `<small style="font-size:10px;">LVL</small><b style="font-size:17px;">${i + 1}</b>`;
 
                 if (i <= maxUnlockedLvl) {
                   bubble.onclick = () => { selectedLevel = i; renderRoad(); };
@@ -567,7 +539,7 @@ jobs:
               }
             };
 
-            // Event Listeners
+            // Buttons
             canvas.addEventListener('pointerdown', (e) => handleShoot(e.clientX, e.clientY));
             document.getElementById('reloadBtn').addEventListener('pointerdown', (e) => {
               e.stopPropagation(); isReloading = true; updateHud();
@@ -575,29 +547,31 @@ jobs:
               setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 400);
             });
             document.getElementById('btnAbortExit').onclick = () => {
-              isRunning = false; document.getElementById('hubScreen').classList.remove('hidden'); switchHub('levels');
+              isRunning = false; 
+              document.getElementById('hubScreen').style.display = 'flex'; 
+              switchHub('levels');
             };
             document.getElementById('btnEnterHub').onclick = () => {
               initAudio();
-              document.getElementById('homeScreen').classList.add('hidden');
-              document.getElementById('hubScreen').classList.remove('hidden');
+              document.getElementById('homeScreen').style.display = 'none';
+              document.getElementById('hubScreen').style.display = 'flex';
               switchHub('levels');
             };
             document.getElementById('btnBackToHome').onclick = () => {
-              document.getElementById('hubScreen').classList.add('hidden');
-              document.getElementById('homeScreen').classList.remove('hidden');
+              document.getElementById('hubScreen').style.display = 'none';
+              document.getElementById('homeScreen').style.display = 'flex';
             };
             document.getElementById('btnStartMission').onclick = () => startMission(selectedLevel);
             document.getElementById('btnNextLevel').onclick = () => startMission(currentLvl + 1);
             document.getElementById('btnWinHub').onclick = () => {
-              document.getElementById('winScreen').classList.add('hidden');
-              document.getElementById('hubScreen').classList.remove('hidden');
+              document.getElementById('winScreen').style.display = 'none';
+              document.getElementById('hubScreen').style.display = 'flex';
               switchHub('levels');
             };
             document.getElementById('btnRetry').onclick = () => startMission(currentLvl);
             document.getElementById('btnHubReturn').onclick = () => {
-              document.getElementById('gameOverScreen').classList.add('hidden');
-              document.getElementById('hubScreen').classList.remove('hidden');
+              document.getElementById('gameOverScreen').style.display = 'none';
+              document.getElementById('hubScreen').style.display = 'flex';
               switchHub('levels');
             };
 
