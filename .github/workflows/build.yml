@@ -84,7 +84,7 @@ jobs:
             .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 8px 90px 8px; }
             .hub-card { background: rgba(74, 34, 14, 0.9); border: 3px solid #b45309; border-radius: 20px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
             .hub-card.active-item { border-color: #facc15; background: rgba(120, 53, 15, 0.95); box-shadow: 0 0 16px rgba(250, 204, 21, 0.5); }
-            .hub-card img { width: 100px; height: 50px; object-fit: contain; margin: 8px 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+            .hub-card img { width: 110px; height: 55px; object-fit: contain; margin: 8px 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
           </style>
         </head>
         <body>
@@ -158,7 +158,12 @@ jobs:
           </div>
 
           <script>
+            // AUDIO SYNTHESIZER & BGM ENGINE
             let audioCtx = null;
+            let bgmOsc = null;
+            let bgmGain = null;
+            let isBgmPlaying = false;
+
             function initAudio() {
               if (!audioCtx) {
                 const AudioClass = window.AudioContext || window.webkitAudioContext;
@@ -167,98 +172,179 @@ jobs:
               if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             }
 
+            function playTapSound() {
+              initAudio();
+              if (!audioCtx) return;
+              try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(480, now);
+                osc.frequency.exponentialRampToValueAtTime(750, now + 0.05);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.05);
+              } catch (e) {}
+            }
+
+            // Upbeat Game Loop BGM using Synthesizer Arpeggio
+            function startBGM() {
+              initAudio();
+              if (isBgmPlaying || !audioCtx) return;
+              isBgmPlaying = true;
+              const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 293.66, 349.23];
+              let step = 0;
+              setInterval(() => {
+                if (!isBgmPlaying || !audioCtx) return;
+                try {
+                  const now = audioCtx.currentTime;
+                  const osc = audioCtx.createOscillator();
+                  const gain = audioCtx.createGain();
+                  osc.type = 'triangle';
+                  osc.frequency.setValueAtTime(notes[step % notes.length], now);
+                  gain.gain.setValueAtTime(0.05, now);
+                  gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
+                  osc.connect(gain);
+                  gain.connect(audioCtx.destination);
+                  osc.start(now);
+                  osc.stop(now + 0.18);
+                  step++;
+                } catch(e) {}
+              }, 200);
+            }
+
             function playSound(type) {
               try {
                 initAudio();
                 if (!audioCtx) return;
                 const now = audioCtx.currentTime;
+
                 if (type === 'shoot') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
                   osc.type = 'sawtooth';
-                  osc.frequency.setValueAtTime(320, now);
-                  osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+                  osc.frequency.setValueAtTime(450, now);
+                  osc.frequency.exponentialRampToValueAtTime(30, now + 0.14);
                   gain.gain.setValueAtTime(0.7, now);
-                  gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                  gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
                   osc.connect(gain);
                   gain.connect(audioCtx.destination);
                   osc.start(now);
-                  osc.stop(now + 0.12);
+                  osc.stop(now + 0.14);
+                } else if (type === 'rocket') {
+                  const osc = audioCtx.createOscillator();
+                  const gain = audioCtx.createGain();
+                  osc.type = 'sawtooth';
+                  osc.frequency.setValueAtTime(220, now);
+                  osc.frequency.linearRampToValueAtTime(50, now + 0.35);
+                  gain.gain.setValueAtTime(0.85, now);
+                  gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                  osc.connect(gain);
+                  gain.connect(audioCtx.destination);
+                  osc.start(now);
+                  osc.stop(now + 0.35);
                 } else if (type === 'hit') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
                   osc.type = 'triangle';
-                  osc.frequency.setValueAtTime(550, now);
-                  osc.frequency.exponentialRampToValueAtTime(180, now + 0.18);
+                  osc.frequency.setValueAtTime(620, now);
+                  osc.frequency.exponentialRampToValueAtTime(150, now + 0.16);
                   gain.gain.setValueAtTime(0.8, now);
-                  gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                  gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
                   osc.connect(gain);
                   gain.connect(audioCtx.destination);
                   osc.start(now);
-                  osc.stop(now + 0.18);
+                  osc.stop(now + 0.16);
                 } else if (type === 'reload') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
                   osc.type = 'sine';
-                  osc.frequency.setValueAtTime(600, now);
-                  osc.frequency.setValueAtTime(900, now + 0.08);
+                  osc.frequency.setValueAtTime(500, now);
+                  osc.frequency.setValueAtTime(800, now + 0.08);
                   gain.gain.setValueAtTime(0.3, now);
-                  gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                  gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
                   osc.connect(gain);
                   gain.connect(audioCtx.destination);
                   osc.start(now);
-                  osc.stop(now + 0.18);
+                  osc.stop(now + 0.16);
                 } else if (type === 'win') {
-                  [330, 440, 550, 660].forEach((freq, i) => {
+                  [392, 523, 659, 784].forEach((freq, i) => {
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.frequency.setValueAtTime(freq, now + i * 0.09);
-                    gain.gain.setValueAtTime(0.4, now + i * 0.09);
-                    gain.gain.linearRampToValueAtTime(0.01, now + i * 0.09 + 0.15);
+                    gain.gain.setValueAtTime(0.35, now + i * 0.09);
+                    gain.gain.linearRampToValueAtTime(0.01, now + i * 0.09 + 0.14);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start(now + i * 0.09);
-                    osc.stop(now + i * 0.09 + 0.15);
+                    osc.stop(now + i * 0.09 + 0.14);
                   });
                 }
               } catch (e) {}
             }
 
+            // ADMOB COMMUNICATION
             function triggerAdMobInterstitial() {
               try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
             }
 
             function requestRewardedAd() {
               initAudio();
+              playTapSound();
               const btn = document.getElementById('btnWatchAd');
               if (btn) btn.innerText = '⏳ LOADING AD...';
               try {
-                if (window.AdMobBridge) window.AdMobBridge.postMessage('showRewarded');
-                else { alert('Rewarded Ad mobile app me hi active hai.'); if (btn) btn.innerText = '🎬 FREE 100 COINS'; }
-              } catch (e) { if (btn) btn.innerText = '🎬 FREE 100 COINS'; }
-              setTimeout(() => { const b = document.getElementById('btnWatchAd'); if (b) b.innerText = '🎬 FREE 100 COINS'; }, 4000);
+                if (window.AdMobBridge) {
+                  window.AdMobBridge.postMessage('showRewarded');
+                } else {
+                  alert('Rewarded Ad mobile app me hi active hai.');
+                  if (btn) btn.innerText = '🎬 FREE 100 COINS';
+                }
+              } catch (e) {
+                if (btn) btn.innerText = '🎬 FREE 100 COINS';
+              }
+              setTimeout(() => {
+                const b = document.getElementById('btnWatchAd');
+                if (b && b.innerText.includes('LOADING')) b.innerText = '🎬 FREE 100 COINS';
+              }, 6000);
             }
 
+            window.onAdLoadFailed = function() {
+              const b = document.getElementById('btnWatchAd');
+              if (b) b.innerText = '🎬 FREE 100 COINS';
+              alert('Ad load ho raha hai, kripya 3-4 second baad dobara tap karein!');
+            };
+
             window.onRewardedAdReward = function() {
-              coins += 100; saveState(); playSound('win');
+              coins += 100;
+              saveState();
+              playSound('win');
               alert('🎉 Badhai ho! 100 Coins mil gaye.');
-              const b = document.getElementById('btnWatchAd'); if (b) b.innerText = '🎬 FREE 100 COINS';
+              const b = document.getElementById('btnWatchAd');
+              if (b) b.innerText = '🎬 FREE 100 COINS';
             };
 
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
-            let coins = parseInt(localStorage.getItem('ds3d_coins') || '150');
+            let coins = parseInt(localStorage.getItem('ds3d_coins') || '250');
             let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_guns') || '[0]');
             let equippedGun = parseInt(localStorage.getItem('ds3d_equipped_gun') || '0');
             let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_max_lvl') || '0');
             let selectedLevel = 0;
 
+            // EXPANDED GUNS & MISSILE ARSENAL
             const REAL_GUNS = [
-              { id: 0, name: 'Glock 19', mag: 15, cost: 0, src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
-              { id: 1, name: 'Colt .45', mag: 6, cost: 120, src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
-              { id: 2, name: 'Magnum 500', mag: 8, cost: 300, src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" }
+              { id: 0, name: 'Glock 19', mag: 15, cost: 0, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
+              { id: 1, name: 'Colt .45', mag: 6, cost: 120, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
+              { id: 2, name: 'AK-47 Rifle', mag: 30, cost: 350, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
+              { id: 3, name: 'Combat Shotgun', mag: 8, cost: 480, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
+              { id: 4, name: 'Missile Launcher', mag: 4, cost: 700, sound: 'rocket', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" }
             ];
 
             const gunSprites = [];
@@ -348,6 +434,8 @@ jobs:
 
             function startMission(lvlIndex) {
               initAudio();
+              startBGM();
+              playTapSound();
               currentLvl = lvlIndex; levelScore = 0; lives = 3;
               maxAmmo = REAL_GUNS[equippedGun]?.mag || 15; ammo = maxAmmo;
               isReloading = false; ducks = []; particles = []; frame = 0; isRunning = true; recoilY = 0;
@@ -363,7 +451,7 @@ jobs:
               isRunning = false;
               playSound('win');
               if (currentLvl + 1 > maxUnlockedLvl) { maxUnlockedLvl = Math.min(99, currentLvl + 1); saveState(); }
-              coins += 35; saveState();
+              coins += 40; saveState();
               document.getElementById('winScreen').style.display = 'flex';
               document.getElementById('winStar1').classList.add('lit');
               document.getElementById('winStar2').classList.add('lit');
@@ -391,13 +479,14 @@ jobs:
                 return;
               }
 
-              ammo--; recoilY = 24;
-              playSound('shoot');
+              ammo--; recoilY = 25;
+              const gunObj = REAL_GUNS[equippedGun];
+              playSound(gunObj.sound || 'shoot');
 
               for (let i = ducks.length - 1; i >= 0; i--) {
                 const d = ducks[i];
-                if (Math.hypot(tx - d.x, ty - d.y) < d.baseSize * d.z * 1.25) {
-                  for (let p = 0; p < 12; p++) particles.push(new Particle(d.x, d.y));
+                if (Math.hypot(tx - d.x, ty - d.y) < d.baseSize * d.z * 1.3) {
+                  for (let p = 0; p < 14; p++) particles.push(new Particle(d.x, d.y));
                   levelScore += d.points; coins += 3; saveState();
                   playSound('hit');
                   ducks.splice(i, 1);
@@ -417,7 +506,7 @@ jobs:
             function loop() {
               if (!isRunning) return;
               frame++;
-              if (recoilY > 0) recoilY -= 2.5;
+              if (recoilY > 0) recoilY -= 2.6;
 
               ctx.clearRect(0, 0, V_W, V_H);
               const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H * 0.65);
@@ -444,12 +533,11 @@ jobs:
                 if (particles[i].alpha <= 0) particles.splice(i, 1);
               }
 
-              // DRAW GUN AIMING UPWARD (POINTING UPWARDS TO THE SKY)
+              // Draw Gun Aiming Directly Upwards
               const gunImg = gunSprites[equippedGun];
               if (gunImg && gunImg.complete) {
                 ctx.save();
                 ctx.translate(V_W / 2, V_H - 90 + recoilY);
-                // Rotate -90 degrees so barrel points directly UP towards the ducks
                 ctx.rotate(-Math.PI / 2);
                 ctx.drawImage(gunImg, -70, -35, 140, 70);
                 ctx.restore();
@@ -458,8 +546,9 @@ jobs:
               requestAnimationFrame(loop);
             }
 
-            // TABS SWITCHING WITH CLEAN DISPLAY NONE
+            // TABS SWITCHING
             window.switchHub = function(tab) {
+              playTapSound();
               const road = document.getElementById('hubListRoad');
               const armory = document.getElementById('hubListArmory');
               const btnRoad = document.getElementById('tabLevels');
@@ -493,7 +582,7 @@ jobs:
                 bubble.innerHTML = `<small style="font-size:10px;">LVL</small><b style="font-size:17px;">${i + 1}</b>`;
 
                 if (i <= maxUnlockedLvl) {
-                  bubble.onclick = () => { selectedLevel = i; renderRoad(); };
+                  bubble.onclick = () => { playTapSound(); selectedLevel = i; renderRoad(); };
                 }
                 row.appendChild(bubble);
                 container.appendChild(row);
@@ -527,10 +616,12 @@ jobs:
             }
 
             window.equipGun = function(id) {
+              playTapSound();
               equippedGun = id; saveState(); renderArmory();
             };
 
             window.buyGun = function(id, cost) {
+              playTapSound();
               if (coins >= cost) {
                 coins -= cost; unlockedGuns.push(id); equippedGun = id;
                 saveState(); renderArmory();
@@ -539,7 +630,7 @@ jobs:
               }
             };
 
-            // Buttons
+            // Touch / Click Buttons
             canvas.addEventListener('pointerdown', (e) => handleShoot(e.clientX, e.clientY));
             document.getElementById('reloadBtn').addEventListener('pointerdown', (e) => {
               e.stopPropagation(); isReloading = true; updateHud();
@@ -547,29 +638,35 @@ jobs:
               setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 400);
             });
             document.getElementById('btnAbortExit').onclick = () => {
+              playTapSound();
               isRunning = false; 
               document.getElementById('hubScreen').style.display = 'flex'; 
               switchHub('levels');
             };
             document.getElementById('btnEnterHub').onclick = () => {
               initAudio();
+              startBGM();
+              playTapSound();
               document.getElementById('homeScreen').style.display = 'none';
               document.getElementById('hubScreen').style.display = 'flex';
               switchHub('levels');
             };
             document.getElementById('btnBackToHome').onclick = () => {
+              playTapSound();
               document.getElementById('hubScreen').style.display = 'none';
               document.getElementById('homeScreen').style.display = 'flex';
             };
             document.getElementById('btnStartMission').onclick = () => startMission(selectedLevel);
             document.getElementById('btnNextLevel').onclick = () => startMission(currentLvl + 1);
             document.getElementById('btnWinHub').onclick = () => {
+              playTapSound();
               document.getElementById('winScreen').style.display = 'none';
               document.getElementById('hubScreen').style.display = 'flex';
               switchHub('levels');
             };
             document.getElementById('btnRetry').onclick = () => startMission(currentLvl);
             document.getElementById('btnHubReturn').onclick = () => {
+              playTapSound();
               document.getElementById('gameOverScreen').style.display = 'none';
               document.getElementById('hubScreen').style.display = 'flex';
               switchHub('levels');
