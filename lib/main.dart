@@ -42,7 +42,8 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
   bool _isBannerLoaded = false;
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
-  bool _isRewardedLoading = false;
+  bool _isLoadingRewarded = false;
+  bool _userWaitingForAd = false;
 
   @override
   void initState() {
@@ -96,19 +97,31 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
   }
 
   void _loadRewarded() {
-    if (_isRewardedLoading || _rewardedAd != null) return;
-    _isRewardedLoading = true;
+    if (_isLoadingRewarded || _rewardedAd != null) return;
+    _isLoadingRewarded = true;
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
-          _isRewardedLoading = false;
+          _isLoadingRewarded = false;
+          if (_userWaitingForAd) {
+            _userWaitingForAd = false;
+            _showRewarded();
+          }
         },
         onAdFailedToLoad: (err) {
           _rewardedAd = null;
-          _isRewardedLoading = false;
+          _isLoadingRewarded = false;
+          if (_userWaitingForAd) {
+            _userWaitingForAd = false;
+            _webController.runJavaScript('window.onAdLoadFailed();');
+          }
+          // Retry after 10 seconds
+          Future.delayed(const Duration(seconds: 10), () {
+            if (mounted) _loadRewarded();
+          });
         },
       ),
     );
@@ -128,18 +141,15 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
           _loadRewarded();
         },
       );
-      _rewardedAd!.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-        _webController.runJavaScript('window.onRewardedAdReward();');
-      });
+      _rewardedAd!.show(
+        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+          _webController.runJavaScript('window.onRewardedAdReward();');
+        },
+      );
       _rewardedAd = null;
     } else {
+      _userWaitingForAd = true;
       _loadRewarded();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ad load ho raha hai, kripya 2 second baad dobara tap karein!'),
-          duration: Duration(seconds: 2),
-        ),
-      );
     }
   }
 
