@@ -36,6 +36,22 @@ jobs:
           echo "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'></head><body style='background:#140904;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;'><h1>Duck Shooter 3D</h1></body></html>" > assets/index.html
         fi
 
+    - name: Fix Kotlin & Gradle Versions
+      run: |
+        # Update Kotlin version in settings.gradle or build.gradle if exists
+        find android -name "settings.gradle" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' {} +
+        find android -name "build.gradle" -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
+
+    - name: Configure AdMob in AndroidManifest
+      run: |
+        # Ensure AdMob App ID exists in AndroidManifest.xml
+        MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST_FILE" ]; then
+          if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "$MANIFEST_FILE"; then
+            sed -i '/<\/application>/i \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1590363558146928~3904943143"/>' "$MANIFEST_FILE"
+          fi
+        fi
+
     - name: Get Dependencies
       run: flutter pub get
 
