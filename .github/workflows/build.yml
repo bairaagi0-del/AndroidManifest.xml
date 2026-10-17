@@ -29,6 +29,13 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter2
 
+    - name: Ensure Assets Folder & File Exist
+      run: |
+        mkdir -p assets
+        if [ ! -f assets/index.html ]; then
+          echo "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'></head><body style='background:#140904;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;'><h1>Duck Shooter 3D</h1></body></html>" > assets/index.html
+        fi
+
     - name: Get Dependencies
       run: flutter pub get
 
