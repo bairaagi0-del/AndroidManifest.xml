@@ -29,13 +29,16 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter2
 
-    - name: Set MinSDK 24 for Amazon Compatibility
+    - name: Force MinSDK 24 in Gradle
       run: |
-        APP_GRADLE="android/app/build.gradle"
-        if [ -f "$APP_GRADLE" ]; then
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/g' "$APP_GRADLE"
-          sed -i 's/minSdkVersion [0-9]\+/minSdkVersion 24/g' "$APP_GRADLE"
-        fi
+        find android -name "build.gradle*" -exec sed -i 's/minSdk\s*=\s*[0-9]\+/minSdk = 24/g' {} +
+        find android -name "build.gradle*" -exec sed -i 's/minSdkVersion\s\+[0-9]\+/minSdkVersion 24/g' {} +
+        find android -name "build.gradle*" -exec sed -i 's/minSdkVersion\s\+flutter\.minSdkVersion/minSdkVersion 24/g' {} +
+        find android -name "build.gradle*" -exec sed -i 's/minSdk\s*=\s*flutter\.minSdkVersion/minSdk = 24/g' {} +
+        
+        # Verify karne ke liye log me print karein
+        echo "=== Checking MinSDK in build.gradle ==="
+        grep -rn "minSdk" android/app/ || true
 
     - name: Create Complete Game Assets & HTML
       run: |
