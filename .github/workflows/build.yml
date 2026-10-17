@@ -29,9 +29,308 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter2
 
-    - name: Ensure Assets Folder Exists
+    - name: Create Complete Game Assets & HTML
       run: |
         mkdir -p assets
+        cat << 'EOF' > assets/index.html
+        <!DOCTYPE html>
+        <html lang="hi">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+          <title>Duck Shooter 3D Ultimate</title>
+          <style>
+            * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
+            html, body { width: 100%; height: 100%; overflow: hidden; background: #140904; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
+            #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
+            canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; background: radial-gradient(circle at 50% 30%, #4a2610 0%, #1e0d04 75%, #0c0502 100%); }
+            .screen.hidden { display: none !important; }
+            .cookie-board-window { background: #c68642; border: 8px solid #5a2a18; outline: 5px solid #ffbe53; border-radius: 36px; padding: 24px 18px; position: relative; max-width: 90%; }
+            .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3.5px solid #fff5c0; color: #542200; font-size: 16px; font-weight: 900; padding: 12px 24px; border-radius: 28px; cursor: pointer; box-shadow: 0 6px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; }
+            .cookie-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #7b3200; }
+            .cookie-btn-green { background: linear-gradient(180deg, #9ae630 0%, #68bf08 45%, #3c8200 100%); border-color: #f1ffd6; color: #173800; box-shadow: 0 6px 0 #1b4d00; }
+            .cookie-btn-blue { background: linear-gradient(180deg, #4ed3ff 0%, #0099e6 45%, #006096 100%); border-color: #d8f5ff; color: #fff; box-shadow: 0 6px 0 #003657; }
+            .cookie-btn-red { background: linear-gradient(180deg, #ff6b6b 0%, #e82727 45%, #a50b0b 100%); border-color: #ffd8d8; color: #fff; box-shadow: 0 6px 0 #5b0505; }
+            .ribbon-banner { background: linear-gradient(180deg, #ffdc33 0%, #f39c12 50%, #d35400 100%); border: 3px solid #fff2a3; border-radius: 18px; padding: 8px 30px; color: #fff; font-size: 24px; font-weight: 900; margin-top: -42px; margin-bottom: 12px; }
+            .ribbon-banner.lose { background: linear-gradient(180deg, #ff7675 0%, #d63031 50%, #7c0b0b 100%); border-color: #ffcccc; }
+            .stars-cluster { display: flex; justify-content: center; gap: 12px; margin: 10px 0 16px 0; }
+            .star-3d { font-size: 40px; opacity: 0.25; }
+            .star-3d.lit { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 16px #facc15); }
+            .gameplay-hud { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
+            .hud-cookie-pill { background: linear-gradient(180deg, #5a2a18 0%, #3a170a 100%); border: 2px solid #e08b26; color: #fff; padding: 5px 12px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; }
+            .gameplay-controls { position: absolute; bottom: 20px; left: 16px; right: 16px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
+            .flow-map-container { flex: 1; width: 100%; overflow-y: auto; padding-bottom: 70px; display: flex; flex-direction: column; align-items: center; }
+            .flow-node-row { width: 100%; display: flex; align-items: center; margin: 10px 0; justify-content: center; }
+            .level-bubble { width: 62px; height: 62px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3px solid #fff5c0; box-shadow: 0 5px 0 #7b3200; color: #542200; font-weight: 900; }
+            .level-bubble.locked { background: #475569; border-color: #64748b; opacity: 0.6; cursor: not-allowed; }
+            .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 0 16px #4ade80; }
+          </style>
+        </head>
+        <body>
+          <div id="phoneContainer">
+            <div id="homeScreen" class="screen">
+              <h1 style="font-size:32px; font-weight:900; color:#fff; margin-bottom:12px; background:linear-gradient(180deg, #ffdf79, #f39c12); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">DUCK SHOOTER 3D</h1>
+              <div class="cookie-board-window" style="width:220px; margin-bottom:20px;">
+                <div style="font-size:70px;">🦆</div>
+                <div style="color:#fff3cc; font-size:13px; font-weight:900;">COOKIE ISLANDS</div>
+              </div>
+              <button id="btnEnterHub" class="cookie-btn" style="width:230px; font-size:17px;">▶ PLAY GAME</button>
+              <button onclick="requestRewardedAd()" class="cookie-btn cookie-btn-green" style="width:230px; font-size:13px; margin-top:10px;">🎬 WATCH AD (+100 COINS)</button>
+              <a href="https://youtube.com/@thegovindgupta?si=gXoJJdVou07U7r1m" target="_blank" style="color:#ff8585; text-decoration:none; font-weight:800; font-size:12px; margin-top:16px;">🔴 Creator: @thegovindgupta</a>
+            </div>
+
+            <div id="hubScreen" class="screen hidden" style="justify-content: flex-start; padding-top: 14px;">
+              <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">ISLAND EXPEDITION</h2>
+                <div style="background:rgba(20,8,3,0.85); border:2px solid #d97706; border-radius:24px; padding:4px 12px; color:#fef08a; font-weight:900;">🪙 <span id="hubCoins">0</span></div>
+              </div>
+              <div id="hubList" class="flow-map-container" style="margin-top:10px;"></div>
+              <div style="position:absolute; bottom:14px; left:16px; right:16px; display:flex; gap:10px;">
+                <button id="btnBackToHome" class="cookie-btn cookie-btn-blue" style="flex:1; padding:10px; font-size:13px;">◀ HOME</button>
+                <button id="btnStartMission" class="cookie-btn cookie-btn-green" style="flex:2; padding:10px; font-size:14px;">START MISSION ▶</button>
+              </div>
+            </div>
+
+            <div class="gameplay-hud">
+              <button id="btnAbortExit" class="cookie-btn cookie-btn-red" style="pointer-events:auto; padding:5px 12px; font-size:11px;">✖ EXIT</button>
+              <div class="hud-cookie-pill"><small>STAGE</small><strong id="uiLvl">1/100</strong></div>
+              <div class="hud-cookie-pill"><small>TARGET</small><strong id="uiScore" style="color:#4ade80;">0/100</strong></div>
+              <div class="hud-cookie-pill"><small>LIVES</small><strong id="uiLives" style="color:#ff6b6b;">❤❤❤</strong></div>
+            </div>
+
+            <div class="gameplay-controls">
+              <div class="hud-cookie-pill" style="padding:6px 14px;"><span style="color:#4ade80; font-weight:900;">AMMO: <b id="uiAmmo">15/15</b></span></div>
+              <button id="reloadBtn" class="cookie-btn cookie-btn-green" style="pointer-events:auto; padding:6px 16px; font-size:12px;">⚡ RELOAD</button>
+            </div>
+
+            <canvas id="gameCanvas" width="720" height="1280"></canvas>
+
+            <div id="winScreen" class="screen hidden">
+              <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
+                <div class="ribbon-banner">YOU WIN!</div>
+                <div class="stars-cluster"><div id="winStar1" class="star-3d">⭐</div><div id="winStar2" class="star-3d">⭐</div><div id="winStar3" class="star-3d">⭐</div></div>
+                <button id="btnNextLevel" class="cookie-btn cookie-btn-green" style="width:100%; margin-bottom:10px;">NEXT STAGE ▶</button>
+                <button id="btnWinHub" class="cookie-btn cookie-btn-blue" style="width:100%;">STAGES MAP</button>
+              </div>
+            </div>
+
+            <div id="gameOverScreen" class="screen hidden">
+              <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
+                <div class="ribbon-banner lose">YOU LOSE!</div>
+                <div style="font-size:42px; margin:8px 0;">🦆💨</div>
+                <button id="btnRetry" class="cookie-btn" style="width:100%; margin-bottom:10px;">RETRY STAGE</button>
+                <button id="btnHubReturn" class="cookie-btn cookie-btn-blue" style="width:100%;">STAGES MAP</button>
+              </div>
+            </div>
+          </div>
+
+          <script>
+            function triggerAdMobInterstitial() {
+              try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
+            }
+            function requestRewardedAd() {
+              try {
+                if (window.AdMobBridge) window.AdMobBridge.postMessage('showRewarded');
+                else alert('Ad feature is active inside mobile app!');
+              } catch (e) {}
+            }
+            window.onRewardedAdReward = function() {
+              coins += 100; saveState(); alert('Congratulations! +100 Coins received.');
+            };
+
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const V_W = 720; const V_H = 1280;
+            let coins = parseInt(localStorage.getItem('ds3d_coins') || '0');
+            let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_max_lvl') || '0');
+            let selectedLevel = 0;
+
+            function saveState() {
+              localStorage.setItem('ds3d_coins', coins);
+              localStorage.setItem('ds3d_max_lvl', maxUnlockedLvl);
+              const hubEl = document.getElementById('hubCoins');
+              if (hubEl) hubEl.innerText = coins;
+            }
+
+            let currentLvl = 0; let levelScore = 0; let lives = 3; let maxAmmo = 15; let ammo = 15;
+            let isReloading = false; let ducks = []; let particles = []; let frame = 0; let isRunning = false;
+
+            class Duck3D {
+              constructor(lvlCfg) {
+                this.dir = Math.random() > 0.5 ? 1 : -1;
+                this.z = 0.55 + Math.random() * 0.85;
+                this.baseSize = 56;
+                this.x = this.dir === 1 ? -100 : V_W + 100;
+                this.y = 240 + Math.random() * 500;
+                this.speed = (lvlCfg.speed + Math.random() * 0.4) * this.z;
+                this.vx = this.speed * this.dir;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.points = 15;
+              }
+              update() {
+                this.x += this.vx * (isReloading ? 0.35 : 1.0);
+                this.y += (Math.sin(frame * 0.08) * 1.8 + this.vy);
+              }
+              draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.z * (this.dir < 0 ? -1 : 1), this.z);
+                ctx.fillStyle = '#7dd3fc';
+                ctx.beginPath(); ctx.ellipse(0, 0, this.baseSize, this.baseSize * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#15803d';
+                ctx.beginPath(); ctx.arc(34, -16, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath(); ctx.moveTo(46, -14); ctx.lineTo(70, -10); ctx.lineTo(46, -4); ctx.fill();
+                ctx.restore();
+              }
+            }
+
+            class Particle {
+              constructor(x, y) {
+                this.x = x; this.y = y; this.vx = (Math.random() - 0.5) * 10; this.vy = (Math.random() - 0.5) * 10; this.alpha = 1.0;
+              }
+              update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.05; }
+              draw() {
+                ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha); ctx.fillStyle = '#fde047'; ctx.fillRect(this.x, this.y, 4, 4); ctx.restore();
+              }
+            }
+
+            function getLevelConfig(lvl) {
+              return { targetScore: 100 + lvl * 30, speed: 1.8 + Math.min(lvl * 0.08, 2.4), spawnInterval: Math.max(45, 75 - lvl) };
+            }
+
+            function updateHud() {
+              const cfg = getLevelConfig(currentLvl);
+              document.getElementById('uiLvl').innerText = `${currentLvl + 1}/100`;
+              document.getElementById('uiScore').innerText = `${levelScore}/${cfg.targetScore}`;
+              document.getElementById('uiLives').innerText = '❤'.repeat(Math.max(0, lives));
+              document.getElementById('uiAmmo').innerText = isReloading ? 'RELOAD...' : `${ammo}/${maxAmmo}`;
+              document.getElementById('hubCoins').innerText = coins;
+            }
+
+            function startMission(lvlIndex) {
+              currentLvl = lvlIndex; levelScore = 0; lives = 3; ammo = maxAmmo;
+              isReloading = false; ducks = []; particles = []; frame = 0; isRunning = true;
+              document.getElementById('homeScreen').classList.add('hidden');
+              document.getElementById('hubScreen').classList.add('hidden');
+              document.getElementById('winScreen').classList.add('hidden');
+              document.getElementById('gameOverScreen').classList.add('hidden');
+              updateHud();
+              loop();
+            }
+
+            function showWinScreen() {
+              isRunning = false;
+              if (currentLvl + 1 > maxUnlockedLvl) { maxUnlockedLvl = Math.min(99, currentLvl + 1); saveState(); }
+              coins += 25; saveState();
+              document.getElementById('winScreen').classList.remove('hidden');
+              document.getElementById('winStar1').classList.add('lit');
+              document.getElementById('winStar2').classList.add('lit');
+              document.getElementById('winStar3').classList.add('lit');
+              triggerAdMobInterstitial();
+            }
+
+            function endGame() {
+              isRunning = false;
+              document.getElementById('gameOverScreen').classList.remove('hidden');
+              triggerAdMobInterstitial();
+            }
+
+            function handleShoot(clientX, clientY) {
+              if (!isRunning) return;
+              const rect = canvas.getBoundingClientRect();
+              const tx = (clientX - rect.left) * (V_W / rect.width);
+              const ty = (clientY - rect.top) * (V_H / rect.height);
+              if (ammo <= 0 || isReloading) {
+                isReloading = true; updateHud();
+                setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 350);
+                return;
+              }
+              ammo--;
+              for (let i = ducks.length - 1; i >= 0; i--) {
+                const d = ducks[i];
+                if (Math.hypot(tx - d.x, ty - d.y) < d.baseSize * d.z * 1.3) {
+                  for (let p = 0; p < 8; p++) particles.push(new Particle(d.x, d.y));
+                  levelScore += d.points; coins += 2; saveState();
+                  ducks.splice(i, 1);
+                  break;
+                }
+              }
+              if (ammo <= 0) { isReloading = true; setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 350); }
+              updateHud();
+              if (levelScore >= getLevelConfig(currentLvl).targetScore) setTimeout(showWinScreen, 300);
+            }
+
+            function loop() {
+              if (!isRunning) return;
+              frame++;
+              ctx.clearRect(0, 0, V_W, V_H);
+              ctx.fillStyle = '#0284c7'; ctx.fillRect(0, 0, V_W, V_H * 0.6);
+              ctx.fillStyle = '#082f49'; ctx.fillRect(0, V_H * 0.6, V_W, V_H * 0.4);
+
+              const cfg = getLevelConfig(currentLvl);
+              if (frame % cfg.spawnInterval === 0 && ducks.length < 5) ducks.push(new Duck3D(cfg));
+              for (let i = ducks.length - 1; i >= 0; i--) {
+                const d = ducks[i]; d.update(); d.draw();
+                if ((d.dir === 1 && d.x > V_W + 100) || (d.dir === -1 && d.x < -100)) {
+                  ducks.splice(i, 1); lives--; updateHud();
+                  if (lives <= 0) { endGame(); return; }
+                }
+              }
+              for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(); particles[i].draw();
+                if (particles[i].alpha <= 0) particles.splice(i, 1);
+              }
+              requestAnimationFrame(loop);
+            }
+
+            canvas.addEventListener('pointerdown', (e) => handleShoot(e.clientX, e.clientY));
+            document.getElementById('reloadBtn').addEventListener('pointerdown', (e) => {
+              e.stopPropagation(); isReloading = true; updateHud();
+              setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 350);
+            });
+            document.getElementById('btnAbortExit').onclick = () => {
+              isRunning = false; document.getElementById('hubScreen').classList.remove('hidden'); switchHub('levels');
+            };
+            window.switchHub = function(tab) {
+              const container = document.getElementById('hubList'); container.innerHTML = '';
+              for (let i = 0; i < 100; i++) {
+                const row = document.createElement('div'); row.className = 'flow-node-row';
+                const bubble = document.createElement('div');
+                bubble.className = `level-bubble ${i <= maxUnlockedLvl ? '' : 'locked'} ${selectedLevel === i ? 'active-node' : ''}`;
+                bubble.innerHTML = `<small>LVL</small><b>${i + 1}</b>`;
+                if (i <= maxUnlockedLvl) bubble.onclick = () => { selectedLevel = i; switchHub('levels'); };
+                row.appendChild(bubble); container.appendChild(row);
+              }
+            };
+            document.getElementById('btnEnterHub').onclick = () => {
+              document.getElementById('homeScreen').classList.add('hidden');
+              document.getElementById('hubScreen').classList.remove('hidden');
+              switchHub('levels');
+            };
+            document.getElementById('btnBackToHome').onclick = () => {
+              document.getElementById('hubScreen').classList.add('hidden');
+              document.getElementById('homeScreen').classList.remove('hidden');
+            };
+            document.getElementById('btnStartMission').onclick = () => startMission(selectedLevel);
+            document.getElementById('btnNextLevel').onclick = () => startMission(currentLvl + 1);
+            document.getElementById('btnWinHub').onclick = () => {
+              document.getElementById('winScreen').classList.add('hidden');
+              document.getElementById('hubScreen').classList.remove('hidden');
+              switchHub('levels');
+            };
+            document.getElementById('btnRetry').onclick = () => startMission(currentLvl);
+            document.getElementById('btnHubReturn').onclick = () => {
+              document.getElementById('gameOverScreen').classList.add('hidden');
+              document.getElementById('hubScreen').classList.remove('hidden');
+              switchHub('levels');
+            };
+            saveState();
+          </script>
+        </body>
+        </html>
+        EOF
 
     - name: Automatically Find & Apply Custom App Icon
       run: |
@@ -40,7 +339,6 @@ jobs:
         import os, glob
         from PIL import Image
 
-        # Find any uploaded png image (app_icon, code_generated, etc.)
         candidates = glob.glob('assets/*.[pP][nN][gG]') + glob.glob('*.[pP][nN][gG]')
         valid_icon = None
         for path in candidates:
@@ -69,8 +367,6 @@ jobs:
                 resized = src.resize((sz, sz), Image.Resampling.LANCZOS)
                 resized.save(os.path.join(target_folder, 'ic_launcher.png'), 'PNG')
             print("Successfully injected custom app icons into all mipmap directories!")
-        else:
-            print("No valid custom icon image found, using default launcher icon.")
         EOF
 
     - name: Fix Kotlin & Gradle Versions
