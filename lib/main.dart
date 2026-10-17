@@ -18,7 +18,7 @@ class DuckShooterApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Duck Shooter 2',
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFF140904),
+        scaffoldBackgroundColor: const Color(0xFF0C0502),
       ),
       home: const DuckGameScreen(),
     );
@@ -42,6 +42,7 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
   bool _isBannerLoaded = false;
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
+  bool _isRewardedLoading = false;
 
   @override
   void initState() {
@@ -77,37 +78,75 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
 
   void _showInterstitial() {
     if (_interstitialAd != null) {
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _loadInterstitial();
+        },
+        onAdFailedToShowFullScreenContent: (ad, err) {
+          ad.dispose();
+          _loadInterstitial();
+        },
+      );
       _interstitialAd!.show();
+      _interstitialAd = null;
+    } else {
       _loadInterstitial();
     }
   }
 
   void _loadRewarded() {
+    if (_isRewardedLoading || _rewardedAd != null) return;
+    _isRewardedLoading = true;
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) => _rewardedAd = ad,
-        onAdFailedToLoad: (err) => _rewardedAd = null,
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+          _isRewardedLoading = false;
+        },
+        onAdFailedToLoad: (err) {
+          _rewardedAd = null;
+          _isRewardedLoading = false;
+        },
       ),
     );
   }
 
   void _showRewarded() {
     if (_rewardedAd != null) {
+      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _rewardedAd = null;
+          _loadRewarded();
+        },
+        onAdFailedToShowFullScreenContent: (ad, err) {
+          ad.dispose();
+          _rewardedAd = null;
+          _loadRewarded();
+        },
+      );
       _rewardedAd!.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
         _webController.runJavaScript('window.onRewardedAdReward();');
       });
-      _loadRewarded();
+      _rewardedAd = null;
     } else {
       _loadRewarded();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ad load ho raha hai, kripya 2 second baad dobara tap karein!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
   void _setupWebView() {
     _webController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF140904))
+      ..setBackgroundColor(const Color(0xFF0C0502))
       ..addJavaScriptChannel(
         'AdMobBridge',
         onMessageReceived: (JavaScriptMessage message) {
