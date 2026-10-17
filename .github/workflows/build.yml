@@ -25,11 +25,15 @@ jobs:
         flutter-version: '3.22.x'
         channel: 'stable'
 
+    - name: Recreate Android Project Structure
+      run: |
+        flutter create . --org com.rahulgupta --project-name duckshooter2
+
     - name: Get Dependencies
       run: flutter pub get
 
     - name: Build Release APK
-      run: flutter build apk --release
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
