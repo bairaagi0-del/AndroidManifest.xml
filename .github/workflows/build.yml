@@ -29,23 +29,51 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter2
 
-    - name: Force MinSDK 24 and TargetSDK 34 in Gradle
+    - name: Force Hardcoded SDK 34 in android/app/build.gradle
       run: |
-        find android -name "build.gradle*" -exec sed -i 's/minSdk\s*=\s*[0-9]\+/minSdk = 24/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/minSdkVersion\s\+[0-9]\+/minSdkVersion 24/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/minSdkVersion\s\+flutter\.minSdkVersion/minSdkVersion 24/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/minSdk\s*=\s*flutter\.minSdkVersion/minSdk = 24/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/targetSdkVersion\s\+[0-9]\+/targetSdkVersion 34/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/targetSdkVersion\s\+flutter\.targetSdkVersion/targetSdkVersion 34/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/targetSdk\s*=\s*flutter\.targetSdkVersion/targetSdk = 34/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/targetSdk\s*=\s*[0-9]\+/targetSdk = 34/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/compileSdk\s*=\s*[0-9]\+/compileSdk = 34/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/compileSdkVersion\s\+[0-9]\+/compileSdkVersion 34/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/compileSdkVersion\s\+flutter\.compileSdkVersion/compileSdkVersion 34/g' {} +
-        
-        # Verify karne ke liye log me print karein
-        echo "=== Checking MinSDK in build.gradle ==="
-        grep -rn "minSdk" android/app/ || true
+        cat << 'EOF' > android/app/build.gradle
+        plugins {
+            id "com.android.application"
+            id "kotlin-android"
+            id "dev.flutter.flutter-gradle-plugin"
+        }
+
+        android {
+            namespace = "com.rahulgupta.duckshooter2"
+            compileSdk = 34
+            ndkVersion = flutter.ndkVersion
+
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_1_8
+                targetCompatibility = JavaVersion.VERSION_1_8
+            }
+
+            kotlinOptions {
+                jvmTarget = "1.8"
+            }
+
+            defaultConfig {
+                applicationId = "com.rahulgupta.duckshooter2"
+                minSdk = 24
+                targetSdk = 34
+                versionCode = 100001
+                versionName = "10.0.0"
+                multiDexEnabled = true
+            }
+
+            buildTypes {
+                release {
+                    signingConfig = signingConfigs.debug
+                    minifyEnabled false
+                    shrinkResources false
+                }
+            }
+        }
+
+        flutter {
+            source = "../.."
+        }
+        EOF
 
     - name: Create Complete Game Assets & HTML
       run: |
@@ -81,7 +109,6 @@ jobs:
             .hud-cookie-pill { background: linear-gradient(180deg, #5a2a18 0%, #3a170a 100%); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
             .gameplay-controls { position: absolute; bottom: 18px; left: 14px; right: 14px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
             
-            /* S-CURVE FLOATING ROAD CONTAINER */
             .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 0 90px 0; display: block; }
             .flow-node-row { width: 100%; height: 90px; position: relative; margin: 10px 0; }
             
@@ -90,7 +117,6 @@ jobs:
             .level-bubble.locked { background: linear-gradient(180deg, #64748b 0%, #334155 100%); border-color: #94a3b8; box-shadow: 0 6px 0 #1e293b; color: #cbd5e1; opacity: 0.7; }
             .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 6px 0 #15803d, 0 0 20px #4ade80; }
 
-            /* ARMORY WEAPONS GRID */
             .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 8px 90px 8px; }
             .hub-card { background: rgba(74, 34, 14, 0.9); border: 3px solid #b45309; border-radius: 20px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
             .hub-card.active-item { border-color: #facc15; background: rgba(120, 53, 15, 0.95); box-shadow: 0 0 16px rgba(250, 204, 21, 0.5); }
@@ -99,7 +125,6 @@ jobs:
         </head>
         <body>
           <div id="phoneContainer">
-            <!-- HOME SCREEN -->
             <div id="homeScreen" class="screen">
               <h1 style="font-size:32px; font-weight:900; color:#fff; margin-bottom:12px; background:linear-gradient(180deg, #ffdf79, #f39c12); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">DUCK SHOOTER 3D</h1>
               <div class="cookie-board-window" style="width:230px; margin-bottom:18px;">
@@ -111,7 +136,6 @@ jobs:
               <a href="https://youtube.com/@thegovindgupta?si=gXoJJdVou07U7r1m" target="_blank" style="color:#ff9999; text-decoration:none; font-weight:800; font-size:12px; margin-top:16px;">🔴 Channel: @thegovindgupta</a>
             </div>
 
-            <!-- HUB / EXPEDITION & ARMORY SCREEN -->
             <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px;">
               <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                 <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION MAP</h2>
@@ -131,7 +155,6 @@ jobs:
               </div>
             </div>
 
-            <!-- GAMEPLAY HUD -->
             <div class="gameplay-hud">
               <button id="btnAbortExit" class="cookie-btn cookie-btn-red" style="pointer-events:auto; padding:5px 12px; font-size:11px;">✖ EXIT</button>
               <div class="hud-cookie-pill"><small>STAGE</small><strong id="uiLvl">1/100</strong></div>
@@ -146,7 +169,6 @@ jobs:
 
             <canvas id="gameCanvas" width="720" height="1280"></canvas>
 
-            <!-- WIN SCREEN -->
             <div id="winScreen" class="screen" style="display:none;">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner">VICTORY!</div>
@@ -156,7 +178,6 @@ jobs:
               </div>
             </div>
 
-            <!-- GAME OVER SCREEN -->
             <div id="gameOverScreen" class="screen" style="display:none;">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner lose">FAILED!</div>
@@ -168,10 +189,7 @@ jobs:
           </div>
 
           <script>
-            // AUDIO SYNTHESIZER & BGM ENGINE
             let audioCtx = null;
-            let bgmOsc = null;
-            let bgmGain = null;
             let isBgmPlaying = false;
 
             function initAudio() {
@@ -201,7 +219,6 @@ jobs:
               } catch (e) {}
             }
 
-            // Upbeat Game Loop BGM using Synthesizer Arpeggio
             function startBGM() {
               initAudio();
               if (isBgmPlaying || !audioCtx) return;
@@ -297,7 +314,6 @@ jobs:
               } catch (e) {}
             }
 
-            // ADMOB COMMUNICATION
             function triggerAdMobInterstitial() {
               try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
             }
@@ -348,7 +364,6 @@ jobs:
             let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_max_lvl') || '0');
             let selectedLevel = 0;
 
-            // EXPANDED GUNS & MISSILE ARSENAL
             const REAL_GUNS = [
               { id: 0, name: 'Glock 19', mag: 15, cost: 0, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
               { id: 1, name: 'Colt .45', mag: 6, cost: 120, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
@@ -543,7 +558,6 @@ jobs:
                 if (particles[i].alpha <= 0) particles.splice(i, 1);
               }
 
-              // Draw Gun Aiming Directly Upwards
               const gunImg = gunSprites[equippedGun];
               if (gunImg && gunImg.complete) {
                 ctx.save();
@@ -556,7 +570,6 @@ jobs:
               requestAnimationFrame(loop);
             }
 
-            // TABS SWITCHING
             window.switchHub = function(tab) {
               playTapSound();
               const road = document.getElementById('hubListRoad');
@@ -640,7 +653,6 @@ jobs:
               }
             };
 
-            // Touch / Click Buttons
             canvas.addEventListener('pointerdown', (e) => handleShoot(e.clientX, e.clientY));
             document.getElementById('reloadBtn').addEventListener('pointerdown', (e) => {
               e.stopPropagation(); isReloading = true; updateHud();
@@ -743,7 +755,7 @@ jobs:
       run: flutter pub get
 
     - name: Build Release APK
-      run: flutter build apk --release --no-tree-shake-icons --build-name=10.0.0 --build-number=100001
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
