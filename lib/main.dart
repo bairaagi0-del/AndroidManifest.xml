@@ -43,7 +43,7 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
   bool _isLoadingRewarded = false;
-  bool _userWaitingForAd = false;
+  bool _waitingForRewardedAd = false;
 
   @override
   void initState() {
@@ -106,20 +106,19 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isLoadingRewarded = false;
-          if (_userWaitingForAd) {
-            _userWaitingForAd = false;
+          if (_waitingForRewardedAd) {
+            _waitingForRewardedAd = false;
             _showRewarded();
           }
         },
         onAdFailedToLoad: (err) {
           _rewardedAd = null;
           _isLoadingRewarded = false;
-          if (_userWaitingForAd) {
-            _userWaitingForAd = false;
+          if (_waitingForRewardedAd) {
+            _waitingForRewardedAd = false;
             _webController.runJavaScript('window.onAdLoadFailed();');
           }
-          // Retry after 10 seconds
-          Future.delayed(const Duration(seconds: 10), () {
+          Future.delayed(const Duration(seconds: 8), () {
             if (mounted) _loadRewarded();
           });
         },
@@ -148,7 +147,7 @@ class _DuckGameScreenState extends State<DuckGameScreen> {
       );
       _rewardedAd = null;
     } else {
-      _userWaitingForAd = true;
+      _waitingForRewardedAd = true;
       _loadRewarded();
     }
   }
