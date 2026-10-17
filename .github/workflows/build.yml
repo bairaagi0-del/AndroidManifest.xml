@@ -29,7 +29,7 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter2
 
-    - name: Force Hardcoded SDK 34 in android/app/build.gradle
+    - name: Force Hardcoded SDK 35 in android/app/build.gradle
       run: |
         cat << 'EOF' > android/app/build.gradle
         plugins {
@@ -40,7 +40,7 @@ jobs:
 
         android {
             namespace = "com.rahulgupta.duckshooter2"
-            compileSdk = 34
+            compileSdk = 35
             ndkVersion = flutter.ndkVersion
 
             compileOptions {
@@ -55,9 +55,9 @@ jobs:
             defaultConfig {
                 applicationId = "com.rahulgupta.duckshooter2"
                 minSdk = 24
-                targetSdk = 34
-                versionCode = 100001
-                versionName = "10.0.0"
+                targetSdk = 35
+                versionCode = 200001
+                versionName = "12.0.0"
                 multiDexEnabled = true
             }
 
