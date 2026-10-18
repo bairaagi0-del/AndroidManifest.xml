@@ -31,7 +31,7 @@ jobs:
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.9.0+10
+        version: 1.9.1+11
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -52,10 +52,11 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter3d
 
-    - name: Write Clean lib/main.dart (Banner + Interstitial + Rewarded with Smart Fallback)
+    - name: Write Clean lib/main.dart (100% Pure Real Ads Only)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
+        import 'dart:async';
         import 'package:flutter/material.dart';
         import 'package:flutter/services.dart';
         import 'package:webview_flutter/webview_flutter.dart';
@@ -90,22 +91,17 @@ jobs:
           bool _isLoadingRewarded = false;
           bool _waitingToShowRewarded = false;
 
-          // Real AdMob Unit IDs
+          // 100% REAL ADMOB UNIT IDS ONLY
           final String _realBannerId = 'ca-app-pub-1590363558146928/9825341835';
           final String _realInterstitialId = 'ca-app-pub-1590363558146928/8937070118';
           final String _realRewardedId = 'ca-app-pub-1590363558146928/6265005825';
 
-          // Fallback Video Ad IDs (Used ONLY if AdMob returns No-Fill on Emulator/New Package)
-          final String _fallbackBannerId = 'ca-app-pub-3940256099942544/6300978111';
-          final String _fallbackInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
-          final String _fallbackRewardedId = 'ca-app-pub-3940256099942544/5224354917';
-
           @override
           void initState() {
             super.initState();
-            _loadBannerAd(useFallback: false);
-            _loadInterstitialAd(useFallback: false);
-            _loadRewardedAd(useFallback: false);
+            _loadBannerAd();
+            _loadInterstitialAd();
+            _loadRewardedAd();
 
             _controller = WebViewController()
               ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -129,10 +125,9 @@ jobs:
             await _controller.loadFlutterAsset('assets/index.html');
           }
 
-          // 1. BANNER AD LOADER (WITH AUTOMATIC FALLBACK)
-          void _loadBannerAd({required bool useFallback}) {
+          void _loadBannerAd() {
             _bannerAd = BannerAd(
-              adUnitId: useFallback ? _fallbackBannerId : _realBannerId,
+              adUnitId: _realBannerId,
               request: const AdRequest(),
               size: AdSize.banner,
               listener: BannerAdListener(
@@ -144,18 +139,15 @@ jobs:
                 onAdFailedToLoad: (ad, err) {
                   ad.dispose();
                   _isBannerReady = false;
-                  if (!useFallback) {
-                    _loadBannerAd(useFallback: true);
-                  }
+                  Future.delayed(const Duration(seconds: 15), _loadBannerAd);
                 },
               ),
             )..load();
           }
 
-          // 2. INTERSTITIAL AD LOADER (WITH AUTOMATIC FALLBACK)
-          void _loadInterstitialAd({required bool useFallback}) {
+          void _loadInterstitialAd() {
             InterstitialAd.load(
-              adUnitId: useFallback ? _fallbackInterstitialId : _realInterstitialId,
+              adUnitId: _realInterstitialId,
               request: const AdRequest(),
               adLoadCallback: InterstitialAdLoadCallback(
                 onAdLoaded: (ad) {
@@ -163,9 +155,7 @@ jobs:
                 },
                 onAdFailedToLoad: (error) {
                   _interstitialAd = null;
-                  if (!useFallback) {
-                    _loadInterstitialAd(useFallback: true);
-                  }
+                  Future.delayed(const Duration(seconds: 15), _loadInterstitialAd);
                 },
               ),
             );
@@ -177,28 +167,27 @@ jobs:
                 onAdDismissedFullScreenContent: (ad) {
                   ad.dispose();
                   _interstitialAd = null;
-                  _loadInterstitialAd(useFallback: false);
+                  _loadInterstitialAd();
                 },
                 onAdFailedToShowFullScreenContent: (ad, error) {
                   ad.dispose();
                   _interstitialAd = null;
-                  _loadInterstitialAd(useFallback: false);
+                  _loadInterstitialAd();
                 },
               );
               _interstitialAd!.show();
               _interstitialAd = null;
             } else {
-              _loadInterstitialAd(useFallback: false);
+              _loadInterstitialAd();
             }
           }
 
-          // 3. REWARDED VIDEO AD LOADER (TRIES REAL AD FIRST -> GUARANTEED FALLBACK)
-          void _loadRewardedAd({required bool useFallback}) {
+          void _loadRewardedAd() {
             if (_isLoadingRewarded || _rewardedAd != null) return;
             _isLoadingRewarded = true;
 
             RewardedAd.load(
-              adUnitId: useFallback ? _fallbackRewardedId : _realRewardedId,
+              adUnitId: _realRewardedId,
               request: const AdRequest(),
               rewardedAdLoadCallback: RewardedAdLoadCallback(
                 onAdLoaded: (ad) {
@@ -213,13 +202,11 @@ jobs:
                 onAdFailedToLoad: (error) {
                   _rewardedAd = null;
                   _isLoadingRewarded = false;
-                  if (!useFallback) {
-                    // Real unit returned No-Fill; immediately load Fallback Video Ad so user NEVER sees an error!
-                    _loadRewardedAd(useFallback: true);
-                  } else if (_waitingToShowRewarded) {
+                  if (_waitingToShowRewarded) {
                     _waitingToShowRewarded = false;
                     _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
                   }
+                  Future.delayed(const Duration(seconds: 10), _loadRewardedAd);
                 },
               ),
             );
@@ -234,12 +221,12 @@ jobs:
                 onAdDismissedFullScreenContent: (ad) {
                   ad.dispose();
                   _rewardedAd = null;
-                  _loadRewardedAd(useFallback: false);
+                  _loadRewardedAd();
                 },
                 onAdFailedToShowFullScreenContent: (ad, error) {
                   ad.dispose();
                   _rewardedAd = null;
-                  _loadRewardedAd(useFallback: false);
+                  _loadRewardedAd();
                 },
               );
 
@@ -252,7 +239,7 @@ jobs:
             } else {
               _waitingToShowRewarded = true;
               _controller.runJavaScript('if(window.showAdLoadingOverlay) window.showAdLoadingOverlay();');
-              _loadRewardedAd(useFallback: false);
+              _loadRewardedAd();
             }
           }
 
@@ -316,8 +303,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 10
-                versionName = "1.9.0"
+                versionCode = 11
+                versionName = "1.9.1"
                 multiDexEnabled = true
             }
 
@@ -717,7 +704,7 @@ jobs:
 
             window.onAdLoadFailed = function() {
               window.hideAdLoadingOverlay();
-              alert('Internet connection check karein aur dobara try karein!');
+              alert('Ad load nahi ho paaya. Kripya internet connection check karein!');
             };
 
             window.onRewardedAdReward = function() {
@@ -755,7 +742,6 @@ jobs:
             const homeCtx = homeCanvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
-            // STARTING COINS = 0 BY DEFAULT (USING FRESH V2 KEYS)
             let coins = parseInt(localStorage.getItem('ds3d_v2_coins') || '0');
             let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_v2_guns') || '[0]');
             let equippedGun = parseInt(localStorage.getItem('ds3d_v2_equipped_gun') || '0');
