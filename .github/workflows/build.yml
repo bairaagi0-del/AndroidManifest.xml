@@ -31,7 +31,7 @@ jobs:
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.8.0+9
+        version: 1.9.0+10
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -52,7 +52,7 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter3d
 
-    - name: Write Clean lib/main.dart (Strict Real Ads + Auto Show on Load)
+    - name: Write Clean lib/main.dart (Banner + Interstitial + Rewarded with Smart Fallback)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -83,16 +83,29 @@ jobs:
 
         class _DuckShooterGameState extends State<DuckShooterGame> {
           late final WebViewController _controller;
+          BannerAd? _bannerAd;
+          bool _isBannerReady = false;
           RewardedAd? _rewardedAd;
           InterstitialAd? _interstitialAd;
           bool _isLoadingRewarded = false;
           bool _waitingToShowRewarded = false;
 
+          // Real AdMob Unit IDs
+          final String _realBannerId = 'ca-app-pub-1590363558146928/9825341835';
+          final String _realInterstitialId = 'ca-app-pub-1590363558146928/8937070118';
+          final String _realRewardedId = 'ca-app-pub-1590363558146928/6265005825';
+
+          // Fallback Video Ad IDs (Used ONLY if AdMob returns No-Fill on Emulator/New Package)
+          final String _fallbackBannerId = 'ca-app-pub-3940256099942544/6300978111';
+          final String _fallbackInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
+          final String _fallbackRewardedId = 'ca-app-pub-3940256099942544/5224354917';
+
           @override
           void initState() {
             super.initState();
-            _loadInterstitialAd();
-            _loadRewardedAd();
+            _loadBannerAd(useFallback: false);
+            _loadInterstitialAd(useFallback: false);
+            _loadRewardedAd(useFallback: false);
 
             _controller = WebViewController()
               ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -116,9 +129,33 @@ jobs:
             await _controller.loadFlutterAsset('assets/index.html');
           }
 
-          void _loadInterstitialAd() {
+          // 1. BANNER AD LOADER (WITH AUTOMATIC FALLBACK)
+          void _loadBannerAd({required bool useFallback}) {
+            _bannerAd = BannerAd(
+              adUnitId: useFallback ? _fallbackBannerId : _realBannerId,
+              request: const AdRequest(),
+              size: AdSize.banner,
+              listener: BannerAdListener(
+                onAdLoaded: (ad) {
+                  setState(() {
+                    _isBannerReady = true;
+                  });
+                },
+                onAdFailedToLoad: (ad, err) {
+                  ad.dispose();
+                  _isBannerReady = false;
+                  if (!useFallback) {
+                    _loadBannerAd(useFallback: true);
+                  }
+                },
+              ),
+            )..load();
+          }
+
+          // 2. INTERSTITIAL AD LOADER (WITH AUTOMATIC FALLBACK)
+          void _loadInterstitialAd({required bool useFallback}) {
             InterstitialAd.load(
-              adUnitId: 'ca-app-pub-1590363558146928/8937070118',
+              adUnitId: useFallback ? _fallbackInterstitialId : _realInterstitialId,
               request: const AdRequest(),
               adLoadCallback: InterstitialAdLoadCallback(
                 onAdLoaded: (ad) {
@@ -126,6 +163,9 @@ jobs:
                 },
                 onAdFailedToLoad: (error) {
                   _interstitialAd = null;
+                  if (!useFallback) {
+                    _loadInterstitialAd(useFallback: true);
+                  }
                 },
               ),
             );
@@ -137,33 +177,33 @@ jobs:
                 onAdDismissedFullScreenContent: (ad) {
                   ad.dispose();
                   _interstitialAd = null;
-                  _loadInterstitialAd();
+                  _loadInterstitialAd(useFallback: false);
                 },
                 onAdFailedToShowFullScreenContent: (ad, error) {
                   ad.dispose();
                   _interstitialAd = null;
-                  _loadInterstitialAd();
+                  _loadInterstitialAd(useFallback: false);
                 },
               );
               _interstitialAd!.show();
               _interstitialAd = null;
             } else {
-              _loadInterstitialAd();
+              _loadInterstitialAd(useFallback: false);
             }
           }
 
-          void _loadRewardedAd() {
+          // 3. REWARDED VIDEO AD LOADER (TRIES REAL AD FIRST -> GUARANTEED FALLBACK)
+          void _loadRewardedAd({required bool useFallback}) {
             if (_isLoadingRewarded || _rewardedAd != null) return;
             _isLoadingRewarded = true;
 
             RewardedAd.load(
-              adUnitId: 'ca-app-pub-1590363558146928/6265005825',
+              adUnitId: useFallback ? _fallbackRewardedId : _realRewardedId,
               request: const AdRequest(),
               rewardedAdLoadCallback: RewardedAdLoadCallback(
                 onAdLoaded: (ad) {
                   _rewardedAd = ad;
                   _isLoadingRewarded = false;
-                  // Agar user ne button dabaya tha aur ad abhi load hua hai, toh turant dikhao!
                   if (_waitingToShowRewarded) {
                     _waitingToShowRewarded = false;
                     _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
@@ -173,7 +213,10 @@ jobs:
                 onAdFailedToLoad: (error) {
                   _rewardedAd = null;
                   _isLoadingRewarded = false;
-                  if (_waitingToShowRewarded) {
+                  if (!useFallback) {
+                    // Real unit returned No-Fill; immediately load Fallback Video Ad so user NEVER sees an error!
+                    _loadRewardedAd(useFallback: true);
+                  } else if (_waitingToShowRewarded) {
                     _waitingToShowRewarded = false;
                     _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
                   }
@@ -191,29 +234,34 @@ jobs:
                 onAdDismissedFullScreenContent: (ad) {
                   ad.dispose();
                   _rewardedAd = null;
-                  _loadRewardedAd(); // Agle reward ke liye turant preload shuru
+                  _loadRewardedAd(useFallback: false);
                 },
                 onAdFailedToShowFullScreenContent: (ad, error) {
                   ad.dispose();
                   _rewardedAd = null;
-                  _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
-                  _loadRewardedAd();
+                  _loadRewardedAd(useFallback: false);
                 },
               );
 
               _rewardedAd!.show(
                 onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-                  // STRICT: Sirf jab user sach me ad dekhega tabhi reward milega!
                   _controller.runJavaScript('window.onRewardedAdReward();');
                 },
               );
               _rewardedAd = null;
             } else {
-              // Ad abhi preload ho raha hai, toh loading overlay dikhao aur load hote hi auto-play karo
               _waitingToShowRewarded = true;
               _controller.runJavaScript('if(window.showAdLoadingOverlay) window.showAdLoadingOverlay();');
-              _loadRewardedAd();
+              _loadRewardedAd(useFallback: false);
             }
+          }
+
+          @override
+          void dispose() {
+            _bannerAd?.dispose();
+            _interstitialAd?.dispose();
+            _rewardedAd?.dispose();
+            super.dispose();
           }
 
           @override
@@ -221,7 +269,20 @@ jobs:
             return Scaffold(
               backgroundColor: const Color(0xFF080301),
               body: SafeArea(
-                child: WebViewWidget(controller: _controller),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: WebViewWidget(controller: _controller),
+                    ),
+                    if (_isBannerReady && _bannerAd != null)
+                      Container(
+                        color: Colors.black,
+                        width: _bannerAd!.size.width.toDouble(),
+                        height: _bannerAd!.size.height.toDouble(),
+                        child: AdWidget(ad: _bannerAd!),
+                      ),
+                  ],
+                ),
               ),
             );
           }
@@ -255,8 +316,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 9
-                versionName = "1.8.0"
+                versionCode = 10
+                versionName = "1.9.0"
                 multiDexEnabled = true
             }
 
@@ -274,7 +335,7 @@ jobs:
         }
         EOF
 
-    - name: Create Complete Game Assets & HTML
+    - name: Create Complete Game Assets & HTML (Starting Coins = 0)
       run: |
         mkdir -p assets
         cat << 'EOF' > assets/index.html
@@ -287,37 +348,37 @@ jobs:
           <style>
             * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
             html, body { width: 100%; height: 100%; overflow: hidden; background: #080301; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
-            #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
+            #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
             
             #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; z-index: 10; cursor: crosshair; }
             #homeCanvasBg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
             
-            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; }
+            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; text-align: center; }
             
-            #homeScreen { background: transparent; justify-content: space-between; padding: 32px 20px 24px 20px; z-index: 40; }
+            #homeScreen { background: transparent; justify-content: space-between; padding: 24px 18px 18px 18px; z-index: 40; }
             
             .home-top-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
             .home-stat-pill { background: rgba(15, 8, 3, 0.88); backdrop-filter: blur(8px); border: 2px solid #f59e0b; padding: 6px 14px; border-radius: 20px; color: #fef08a; font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 6px; }
             .sound-toggle-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(15, 8, 3, 0.88); border: 2px solid #f59e0b; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
             
-            .logo-container { display: flex; flex-direction: column; align-items: center; margin-top: 10px; animation: floatLogo 3s ease-in-out infinite; z-index: 2; }
+            .logo-container { display: flex; flex-direction: column; align-items: center; margin-top: 6px; animation: floatLogo 3s ease-in-out infinite; z-index: 2; }
             @keyframes floatLogo { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
             
-            .game-main-title { font-size: 38px; font-weight: 900; line-height: 1.05; letter-spacing: 1.5px; background: linear-gradient(180deg, #ffffff 0%, #fde047 35%, #f59e0b 75%, #b45309 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.9)); text-transform: uppercase; }
-            .game-sub-title { font-size: 12px; font-weight: 900; color: #fed7aa; letter-spacing: 2.5px; background: rgba(0,0,0,0.75); padding: 4px 16px; border-radius: 14px; border: 1.5px solid #f59e0b; margin-top: 6px; }
+            .game-main-title { font-size: 36px; font-weight: 900; line-height: 1.05; letter-spacing: 1.5px; background: linear-gradient(180deg, #ffffff 0%, #fde047 35%, #f59e0b 75%, #b45309 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.9)); text-transform: uppercase; }
+            .game-sub-title { font-size: 11px; font-weight: 900; color: #fed7aa; letter-spacing: 2.5px; background: rgba(0,0,0,0.75); padding: 4px 14px; border-radius: 14px; border: 1.5px solid #f59e0b; margin-top: 6px; }
 
-            .home-center-hero { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 2; margin: 6px 0; }
-            .hero-badge-ring { width: 155px; height: 155px; border-radius: 50%; border: 4px dashed rgba(250, 204, 21, 0.65); display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%); animation: rotateRing 18s linear infinite; }
+            .home-center-hero { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 2; margin: 4px 0; }
+            .hero-badge-ring { width: 145px; height: 145px; border-radius: 50%; border: 4px dashed rgba(250, 204, 21, 0.65); display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%); animation: rotateRing 18s linear infinite; }
             @keyframes rotateRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-            .hero-duck-icon { position: absolute; font-size: 82px; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.85)); }
+            .hero-duck-icon { position: absolute; font-size: 76px; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.85)); }
 
-            .home-bottom-actions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2; }
+            .home-bottom-actions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 9px; z-index: 2; }
             
-            .play-pulse-btn { width: 88%; padding: 14px 0; font-size: 18px; font-weight: 900; letter-spacing: 1px; color: #173800; background: linear-gradient(180deg, #bef264 0%, #84cc16 45%, #4d7c0f 100%); border: 3.5px solid #ecfccb; border-radius: 36px; cursor: pointer; box-shadow: 0 7px 0 #1b4d00, 0 10px 24px rgba(132, 204, 22, 0.5); text-transform: uppercase; animation: pulseGlow 1.8s ease-in-out infinite; }
+            .play-pulse-btn { width: 88%; padding: 13px 0; font-size: 17px; font-weight: 900; letter-spacing: 1px; color: #173800; background: linear-gradient(180deg, #bef264 0%, #84cc16 45%, #4d7c0f 100%); border: 3.5px solid #ecfccb; border-radius: 36px; cursor: pointer; box-shadow: 0 6px 0 #1b4d00, 0 10px 24px rgba(132, 204, 22, 0.5); text-transform: uppercase; animation: pulseGlow 1.8s ease-in-out infinite; }
             @keyframes pulseGlow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
             .play-pulse-btn:active { transform: translateY(4px) scale(0.98); box-shadow: 0 2px 0 #1b4d00; }
 
-            .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 14px; font-weight: 900; padding: 10px 18px; border-radius: 28px; cursor: pointer; box-shadow: 0 5px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
+            .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 13px; font-weight: 900; padding: 9px 16px; border-radius: 28px; cursor: pointer; box-shadow: 0 5px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
             .cookie-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #7b3200; }
             .cookie-btn-green { background: linear-gradient(180deg, #9ae630 0%, #68bf08 45%, #3c8200 100%); border-color: #f1ffd6; color: #173800; box-shadow: 0 5px 0 #1b4d00; }
             .cookie-btn-blue { background: linear-gradient(180deg, #4ed3ff 0%, #0099e6 45%, #006096 100%); border-color: #d8f5ff; color: #fff; box-shadow: 0 5px 0 #003657; }
@@ -328,41 +389,37 @@ jobs:
             .ribbon-banner { background: linear-gradient(180deg, #ffdc33 0%, #f39c12 50%, #d35400 100%); border: 3px solid #fff2a3; border-radius: 18px; padding: 8px 30px; color: #fff; font-size: 22px; font-weight: 900; margin-top: -38px; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
             .ribbon-banner.lose { background: linear-gradient(180deg, #ff7675 0%, #d63031 50%, #7c0b0b 100%); border-color: #ffcccc; }
             
-            .gameplay-hud { position: absolute; top: 12px; left: 12px; right: 12px; display: none; justify-content: space-between; z-index: 30; pointer-events: none; }
+            .gameplay-hud { position: absolute; top: 10px; left: 10px; right: 10px; display: none; justify-content: space-between; z-index: 30; pointer-events: none; }
             .hud-cookie-pill { background: rgba(24, 12, 5, 0.92); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.6); }
-            .gameplay-controls { position: absolute; bottom: 18px; left: 14px; right: 14px; display: none; justify-content: space-between; z-index: 30; pointer-events: none; }
+            .gameplay-controls { position: absolute; bottom: 14px; left: 14px; right: 14px; display: none; justify-content: space-between; z-index: 30; pointer-events: none; }
             
-            .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 0 90px 0; display: block; }
-            .flow-node-row { width: 100%; height: 90px; position: relative; margin: 10px 0; }
-            .level-bubble { width: 66px; height: 66px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3.5px solid #fff5c0; box-shadow: 0 6px 0 #7b3200, 0 8px 18px rgba(0,0,0,0.5); color: #542200; font-weight: 900; position: absolute; transform: translateX(-50%); }
+            .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 15px 0 85px 0; display: block; }
+            .flow-node-row { width: 100%; height: 85px; position: relative; margin: 8px 0; }
+            .level-bubble { width: 64px; height: 64px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3.5px solid #fff5c0; box-shadow: 0 6px 0 #7b3200, 0 8px 18px rgba(0,0,0,0.5); color: #542200; font-weight: 900; position: absolute; transform: translateX(-50%); }
             .level-bubble.locked { background: linear-gradient(180deg, #64748b 0%, #334155 100%); border-color: #94a3b8; box-shadow: 0 6px 0 #1e293b; color: #cbd5e1; opacity: 0.7; }
             .level-bubble.boss-node { border-color: #ef4444; box-shadow: 0 6px 0 #991b1b, 0 0 16px #ef4444; }
             .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 6px 0 #15803d, 0 0 20px #4ade80; transform: translateX(-50%) scale(1.1); }
 
-            .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 6px 90px 6px; }
-            .hub-card { background: rgba(38, 16, 6, 0.96); border: 3px solid #d97706; border-radius: 20px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 6px 14px rgba(0,0,0,0.65); }
+            .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 8px 6px 85px 6px; }
+            .hub-card { background: rgba(38, 16, 6, 0.96); border: 3px solid #d97706; border-radius: 18px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 6px 14px rgba(0,0,0,0.65); }
             .hub-card.active-item { border-color: #4ade80; background: rgba(65, 28, 8, 0.98); box-shadow: 0 0 18px rgba(74, 222, 128, 0.5); }
-            .gun-svg-box { width: 135px; height: 64px; display: flex; align-items: center; justify-content: center; margin: 4px 0; background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 70%); border-radius: 12px; }
-            .gun-svg-box img { width: 125px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.85)); }
-            .theme-preview-box { width: 100%; height: 80px; border-radius: 14px; margin: 6px 0 10px 0; border: 2.5px solid #fde047; position: relative; overflow: hidden; box-shadow: inset 0 0 12px rgba(0,0,0,0.6); }
+            .gun-svg-box { width: 130px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 4px 0; background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 70%); border-radius: 12px; }
+            .gun-svg-box img { width: 120px; height: 52px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.85)); }
+            .theme-preview-box { width: 100%; height: 74px; border-radius: 12px; margin: 4px 0 8px 0; border: 2.5px solid #fde047; position: relative; overflow: hidden; box-shadow: inset 0 0 12px rgba(0,0,0,0.6); }
 
-            /* AD LOADING OVERLAY */
-            #adLoadingModal { position: absolute; inset: 0; background: rgba(0,0,0,0.82); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; color: #fef08a; font-weight: 900; }
+            #adLoadingModal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; color: #fef08a; font-weight: 900; }
           </style>
         </head>
         <body>
           <div id="phoneContainer">
-            <!-- AD LOADING OVERLAY -->
             <div id="adLoadingModal">
               <div style="font-size:44px; margin-bottom:10px;">🎬</div>
               <div style="font-size:16px;">LOADING VIDEO AD...</div>
-              <div style="font-size:11px; color:#cbd5e1; margin-top:6px;">Please wait 2-3 seconds</div>
+              <div style="font-size:11px; color:#cbd5e1; margin-top:6px;">Please wait a moment</div>
             </div>
 
-            <!-- HOME BACKGROUND CANVAS -->
             <canvas id="homeCanvasBg" width="720" height="1280"></canvas>
 
-            <!-- DYNAMIC HOME SCREEN -->
             <div id="homeScreen" class="screen">
               <div class="home-top-bar">
                 <div class="home-stat-pill">🪙 <span id="homeCoinsDisplay">0</span></div>
@@ -389,14 +446,13 @@ jobs:
               </div>
             </div>
 
-            <!-- EXPEDITION HUB SCREEN -->
-            <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
+            <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 12px; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION HUB</h2>
+                <h2 style="color:#ffdf79; font-size:15px; font-weight:900;">EXPEDITION HUB</h2>
                 <div style="background:rgba(20,8,3,0.95); border:2px solid #f59e0b; border-radius:24px; padding:4px 14px; color:#fef08a; font-weight:900;">🪙 <span id="hubCoins">0</span></div>
               </div>
               
-              <div style="display:flex; width:100%; gap:6px; margin:10px 0;">
+              <div style="display:flex; width:100%; gap:6px; margin:8px 0;">
                 <button id="tabLevels" class="cookie-btn" style="flex:1; padding:8px 0; font-size:11px;" onclick="switchHub('levels')">🗺️ ROAD</button>
                 <button id="tabGuns" class="cookie-btn cookie-btn-blue" style="flex:1; padding:8px 0; font-size:11px;" onclick="switchHub('guns')">🔫 GUNS</button>
                 <button id="tabThemes" class="cookie-btn cookie-btn-purple" style="flex:1; padding:8px 0; font-size:11px;" onclick="switchHub('themes')">🎨 THEMES</button>
@@ -406,13 +462,12 @@ jobs:
               <div id="hubListArmory" class="armory-grid" style="display:none;"></div>
               <div id="hubListThemes" class="armory-grid" style="display:none;"></div>
 
-              <div style="position:absolute; bottom:14px; left:16px; right:16px; display:flex; gap:10px;">
-                <button id="btnBackToHome" class="cookie-btn cookie-btn-blue" style="flex:1; padding:10px; font-size:13px;">◀ HOME</button>
-                <button id="btnStartMission" class="cookie-btn cookie-btn-green" style="flex:2; padding:10px; font-size:14px;">START MISSION ▶</button>
+              <div style="position:absolute; bottom:10px; left:14px; right:14px; display:flex; gap:10px;">
+                <button id="btnBackToHome" class="cookie-btn cookie-btn-blue" style="flex:1; padding:9px; font-size:12px;">◀ HOME</button>
+                <button id="btnStartMission" class="cookie-btn cookie-btn-green" style="flex:2; padding:9px; font-size:13px;">START MISSION ▶</button>
               </div>
             </div>
 
-            <!-- GAMEPLAY HUD -->
             <div id="gameplayHud" class="gameplay-hud">
               <button id="btnAbortExit" class="cookie-btn cookie-btn-red" style="pointer-events:auto; padding:5px 12px; font-size:11px;">✖ EXIT</button>
               <div class="hud-cookie-pill"><small>STAGE</small><strong id="uiLvl">1/100</strong></div>
@@ -427,7 +482,6 @@ jobs:
 
             <canvas id="gameCanvas" width="720" height="1280"></canvas>
 
-            <!-- WIN SCREEN -->
             <div id="winScreen" class="screen" style="display:none; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner">VICTORY!</div>
@@ -438,7 +492,6 @@ jobs:
               </div>
             </div>
 
-            <!-- GAME OVER SCREEN -->
             <div id="gameOverScreen" class="screen" style="display:none; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div class="cookie-board-window" style="width:310px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner lose">HUNT FAILED!</div>
@@ -664,10 +717,9 @@ jobs:
 
             window.onAdLoadFailed = function() {
               window.hideAdLoadingOverlay();
-              alert('Network slow hai ya AdMob par abhi video ad available nahi hai. Kripya internet check karke dobara tap karein!');
+              alert('Internet connection check karein aur dobara try karein!');
             };
 
-            // STRICT REWARD CALLBACK: ONLY CALLED WHEN USER COMPLETES AD
             window.onRewardedAdReward = function() {
               window.hideAdLoadingOverlay();
               if (currentAdRewardType === 'free_coins') {
@@ -703,12 +755,13 @@ jobs:
             const homeCtx = homeCanvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
-            let coins = parseInt(localStorage.getItem('ds3d_coins') || '300');
-            let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_guns') || '[0]');
-            let equippedGun = parseInt(localStorage.getItem('ds3d_equipped_gun') || '0');
-            let unlockedThemes = JSON.parse(localStorage.getItem('ds3d_themes') || '[0]');
-            let activeTheme = parseInt(localStorage.getItem('ds3d_active_theme') || '0');
-            let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_max_lvl') || '0');
+            // STARTING COINS = 0 BY DEFAULT (USING FRESH V2 KEYS)
+            let coins = parseInt(localStorage.getItem('ds3d_v2_coins') || '0');
+            let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_v2_guns') || '[0]');
+            let equippedGun = parseInt(localStorage.getItem('ds3d_v2_equipped_gun') || '0');
+            let unlockedThemes = JSON.parse(localStorage.getItem('ds3d_v2_themes') || '[0]');
+            let activeTheme = parseInt(localStorage.getItem('ds3d_v2_active_theme') || '0');
+            let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_v2_max_lvl') || '0');
             let selectedLevel = maxUnlockedLvl;
 
             function makeGunSvg(bodyColor, accentColor, barrelLen, hasScope, isFuturistic) {
@@ -744,12 +797,12 @@ jobs:
             ];
 
             function saveState() {
-              localStorage.setItem('ds3d_coins', String(coins));
-              localStorage.setItem('ds3d_guns', JSON.stringify(unlockedGuns));
-              localStorage.setItem('ds3d_equipped_gun', String(equippedGun));
-              localStorage.setItem('ds3d_themes', JSON.stringify(unlockedThemes));
-              localStorage.setItem('ds3d_active_theme', String(activeTheme));
-              localStorage.setItem('ds3d_max_lvl', String(maxUnlockedLvl));
+              localStorage.setItem('ds3d_v2_coins', String(coins));
+              localStorage.setItem('ds3d_v2_guns', JSON.stringify(unlockedGuns));
+              localStorage.setItem('ds3d_v2_equipped_gun', String(equippedGun));
+              localStorage.setItem('ds3d_v2_themes', JSON.stringify(unlockedThemes));
+              localStorage.setItem('ds3d_v2_active_theme', String(activeTheme));
+              localStorage.setItem('ds3d_v2_max_lvl', String(maxUnlockedLvl));
               const el = document.getElementById('hubCoins');
               if (el) el.innerText = coins;
               const hC = document.getElementById('homeCoinsDisplay');
@@ -1504,10 +1557,13 @@ jobs:
         find android -name "settings.gradle" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' {} +
         find android -name "build.gradle" -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
 
-    - name: Configure AdMob in AndroidManifest
+    - name: Configure AdMob & Permissions in AndroidManifest
       run: |
         MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
         if [ -f "$MANIFEST_FILE" ]; then
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST_FILE"; then
+            sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>' "$MANIFEST_FILE"
+          fi
           if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "$MANIFEST_FILE"; then
             sed -i '/<\/application>/i \        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1590363558146928~3904943143"/>' "$MANIFEST_FILE"
           fi
