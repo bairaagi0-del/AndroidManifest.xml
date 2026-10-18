@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 1
-                versionName = "1.0.0"
+                versionCode = 4
+                versionName = "1.3.0"
                 multiDexEnabled = true
             }
 
@@ -84,69 +84,82 @@ jobs:
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-          <title>Duck Shooter 3D Ultimate</title>
+          <title>Duck Hunter 3D Ultimate Hunter</title>
           <style>
             * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
             html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0502; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
             #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
             canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; background: radial-gradient(circle at 50% 30%, #5a2a18 0%, #200d04 75%, #0c0502 100%); }
-            .cookie-board-window { background: #c68642; border: 8px solid #5a2a18; outline: 5px solid #ffbe53; border-radius: 36px; padding: 22px 16px; position: relative; max-width: 92%; box-shadow: 0 12px 30px rgba(0,0,0,0.8); }
-            .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 15px; font-weight: 900; padding: 12px 22px; border-radius: 28px; cursor: pointer; box-shadow: 0 6px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
-            .cookie-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #7b3200; }
-            .cookie-btn-green { background: linear-gradient(180deg, #9ae630 0%, #68bf08 45%, #3c8200 100%); border-color: #f1ffd6; color: #173800; box-shadow: 0 6px 0 #1b4d00; }
-            .cookie-btn-blue { background: linear-gradient(180deg, #4ed3ff 0%, #0099e6 45%, #006096 100%); border-color: #d8f5ff; color: #fff; box-shadow: 0 6px 0 #003657; }
-            .cookie-btn-red { background: linear-gradient(180deg, #ff6b6b 0%, #e82727 45%, #a50b0b 100%); border-color: #ffd8d8; color: #fff; box-shadow: 0 6px 0 #5b0505; }
+            
+            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%); }
+            
+            .cookie-board-window { background: #b07032; border: 8px solid #4a2110; outline: 5px solid #ffbe53; border-radius: 36px; padding: 22px 16px; position: relative; max-width: 92%; box-shadow: 0 12px 30px rgba(0,0,0,0.8); }
+            .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 14px; font-weight: 900; padding: 10px 18px; border-radius: 28px; cursor: pointer; box-shadow: 0 5px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
+            .cookie-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #7b3200; }
+            .cookie-btn-green { background: linear-gradient(180deg, #9ae630 0%, #68bf08 45%, #3c8200 100%); border-color: #f1ffd6; color: #173800; box-shadow: 0 5px 0 #1b4d00; }
+            .cookie-btn-blue { background: linear-gradient(180deg, #4ed3ff 0%, #0099e6 45%, #006096 100%); border-color: #d8f5ff; color: #fff; box-shadow: 0 5px 0 #003657; }
+            .cookie-btn-purple { background: linear-gradient(180deg, #d946ef 0%, #a855f7 45%, #7e22ce 100%); border-color: #fae8ff; color: #fff; box-shadow: 0 5px 0 #581c87; }
+            .cookie-btn-red { background: linear-gradient(180deg, #ff6b6b 0%, #e82727 45%, #a50b0b 100%); border-color: #ffd8d8; color: #fff; box-shadow: 0 5px 0 #5b0505; }
+            
             .ribbon-banner { background: linear-gradient(180deg, #ffdc33 0%, #f39c12 50%, #d35400 100%); border: 3px solid #fff2a3; border-radius: 18px; padding: 8px 30px; color: #fff; font-size: 22px; font-weight: 900; margin-top: -38px; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
             .ribbon-banner.lose { background: linear-gradient(180deg, #ff7675 0%, #d63031 50%, #7c0b0b 100%); border-color: #ffcccc; }
-            .stars-cluster { display: flex; justify-content: center; gap: 10px; margin: 8px 0 14px 0; }
-            .star-3d { font-size: 38px; opacity: 0.25; filter: grayscale(1); }
-            .star-3d.lit { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 16px #facc15) grayscale(0); }
+            
             .gameplay-hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
-            .hud-cookie-pill { background: linear-gradient(180deg, #5a2a18 0%, #3a170a 100%); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+            .hud-cookie-pill { background: rgba(24, 12, 5, 0.88); backdrop-filter: blur(4px); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.5); }
             .gameplay-controls { position: absolute; bottom: 18px; left: 14px; right: 14px; display: flex; justify-content: space-between; z-index: 30; pointer-events: none; }
+            
             .flow-map-container { flex: 1; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 20px 0 90px 0; display: block; }
             .flow-node-row { width: 100%; height: 90px; position: relative; margin: 10px 0; }
             .level-bubble { width: 66px; height: 66px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(180deg, #ffc857 0%, #d86900 100%); border: 3.5px solid #fff5c0; box-shadow: 0 6px 0 #7b3200, 0 8px 18px rgba(0,0,0,0.5); color: #542200; font-weight: 900; position: absolute; transform: translateX(-50%); transition: transform 0.15s ease; }
-            .level-bubble:active { transform: translateX(-50%) scale(0.92); }
             .level-bubble.locked { background: linear-gradient(180deg, #64748b 0%, #334155 100%); border-color: #94a3b8; box-shadow: 0 6px 0 #1e293b; color: #cbd5e1; opacity: 0.7; }
+            .level-bubble.boss-node { border-color: #ef4444; box-shadow: 0 6px 0 #991b1b, 0 0 16px #ef4444; }
             .level-bubble.active-node { border-color: #4ade80; box-shadow: 0 6px 0 #15803d, 0 0 20px #4ade80; }
-            .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 8px 90px 8px; }
-            .hub-card { background: rgba(74, 34, 14, 0.9); border: 3px solid #b45309; border-radius: 20px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
-            .hub-card.active-item { border-color: #facc15; background: rgba(120, 53, 15, 0.95); box-shadow: 0 0 16px rgba(250, 204, 21, 0.5); }
-            .hub-card img { width: 110px; height: 55px; object-fit: contain; margin: 8px 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+
+            .armory-grid { flex: 1; width: 100%; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px 6px 90px 6px; }
+            .hub-card { background: rgba(45, 18, 5, 0.94); border: 3px solid #b45309; border-radius: 18px; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 5px 12px rgba(0,0,0,0.5); }
+            .hub-card.active-item { border-color: #facc15; background: rgba(110, 48, 12, 0.95); box-shadow: 0 0 16px rgba(250, 204, 21, 0.6); }
+            .hub-card img { width: 110px; height: 50px; object-fit: contain; margin: 6px 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.7)); }
+            .theme-preview-box { width: 100%; height: 60px; border-radius: 12px; margin-bottom: 8px; border: 2px solid rgba(255,255,255,0.3); }
           </style>
         </head>
         <body>
           <div id="phoneContainer">
+            <!-- HOME SCREEN -->
             <div id="homeScreen" class="screen">
-              <h1 style="font-size:32px; font-weight:900; color:#fff; margin-bottom:12px; background:linear-gradient(180deg, #ffdf79, #f39c12); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">DUCK SHOOTER 3D</h1>
+              <h1 style="font-size:30px; font-weight:900; color:#fff; margin-bottom:12px; background:linear-gradient(180deg, #ffdf79, #f39c12); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">DUCK HUNTER 3D</h1>
               <div class="cookie-board-window" style="width:230px; margin-bottom:18px;">
                 <div style="font-size:75px; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));">🦆</div>
-                <div style="color:#fff3cc; font-size:13px; font-weight:900; letter-spacing:1px; margin-top:4px;">COOKIE EXPEDITION</div>
+                <div style="color:#fff3cc; font-size:12px; font-weight:900; letter-spacing:1px; margin-top:4px;">REAL WILD EXPEDITION</div>
               </div>
               <button id="btnEnterHub" class="cookie-btn" style="width:240px; font-size:16px;">▶ PLAY GAME</button>
-              <button id="btnWatchAd" onclick="requestRewardedAd()" class="cookie-btn cookie-btn-green" style="width:240px; font-size:12px; margin-top:10px;">🎬 FREE 100 COINS</button>
+              <button id="btnWatchAd" onclick="requestRewardedAd('free_coins')" class="cookie-btn cookie-btn-green" style="width:240px; font-size:12px; margin-top:10px;">🎬 FREE 100 COINS</button>
               <a href="https://youtube.com/@thegovindgupta?si=gXoJJdVou07U7r1m" target="_blank" style="color:#ff9999; text-decoration:none; font-weight:800; font-size:12px; margin-top:16px;">🔴 Channel: @thegovindgupta</a>
             </div>
 
+            <!-- HUB SCREEN -->
             <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px;">
               <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION MAP</h2>
+                <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION HUB</h2>
                 <div style="background:rgba(20,8,3,0.9); border:2px solid #d97706; border-radius:24px; padding:4px 14px; color:#fef08a; font-weight:900;">🪙 <span id="hubCoins">0</span></div>
               </div>
-              <div style="display:flex; width:100%; gap:8px; margin:10px 0;">
-                <button id="tabLevels" class="cookie-btn" style="flex:1; padding:8px 0; font-size:12px;" onclick="switchHub('levels')">🗺️ ISLAND ROAD</button>
-                <button id="tabGuns" class="cookie-btn cookie-btn-blue" style="flex:1; padding:8px 0; font-size:12px;" onclick="switchHub('guns')">🔫 ARMORY</button>
+              
+              <div style="display:flex; width:100%; gap:5px; margin:10px 0;">
+                <button id="tabLevels" class="cookie-btn" style="flex:1; padding:8px 0; font-size:11px;" onclick="switchHub('levels')">🗺️ ROAD</button>
+                <button id="tabGuns" class="cookie-btn cookie-btn-blue" style="flex:1; padding:8px 0; font-size:11px;" onclick="switchHub('guns')">🔫 GUNS</button>
+                <button id="tabThemes" class="cookie-btn cookie-btn-purple" style="flex:1; padding:8px 0; font-size:11px;" onclick="switchHub('themes')">🎨 THEMES</button>
               </div>
+              
               <div id="hubListRoad" class="flow-map-container"></div>
               <div id="hubListArmory" class="armory-grid" style="display:none;"></div>
+              <div id="hubListThemes" class="armory-grid" style="display:none;"></div>
+
               <div style="position:absolute; bottom:14px; left:16px; right:16px; display:flex; gap:10px;">
                 <button id="btnBackToHome" class="cookie-btn cookie-btn-blue" style="flex:1; padding:10px; font-size:13px;">◀ HOME</button>
                 <button id="btnStartMission" class="cookie-btn cookie-btn-green" style="flex:2; padding:10px; font-size:14px;">START MISSION ▶</button>
               </div>
             </div>
 
+            <!-- GAMEPLAY HUD -->
             <div class="gameplay-hud">
               <button id="btnAbortExit" class="cookie-btn cookie-btn-red" style="pointer-events:auto; padding:5px 12px; font-size:11px;">✖ EXIT</button>
               <div class="hud-cookie-pill"><small>STAGE</small><strong id="uiLvl">1/100</strong></div>
@@ -161,20 +174,26 @@ jobs:
 
             <canvas id="gameCanvas" width="720" height="1280"></canvas>
 
+            <!-- WIN SCREEN -->
             <div id="winScreen" class="screen" style="display:none;">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner">VICTORY!</div>
-                <div class="stars-cluster"><div id="winStar1" class="star-3d">⭐</div><div id="winStar2" class="star-3d">⭐</div><div id="winStar3" class="star-3d">⭐</div></div>
+                <div style="font-size:36px; margin:6px 0;">⭐⭐⭐</div>
                 <button id="btnNextLevel" class="cookie-btn cookie-btn-green" style="width:100%; margin-bottom:10px;">NEXT STAGE ▶</button>
                 <button id="btnWinHub" class="cookie-btn cookie-btn-blue" style="width:100%;">STAGES MAP</button>
               </div>
             </div>
 
+            <!-- GAME OVER SCREEN (WITH REVIVE REWARDED AD) -->
             <div id="gameOverScreen" class="screen" style="display:none;">
-              <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
-                <div class="ribbon-banner lose">FAILED!</div>
-                <div style="font-size:48px; margin:8px 0;">🦆💨</div>
-                <button id="btnRetry" class="cookie-btn" style="width:100%; margin-bottom:10px;">RETRY STAGE</button>
+              <div class="cookie-board-window" style="width:310px; display:flex; flex-direction:column; align-items:center;">
+                <div class="ribbon-banner lose">HUNT FAILED!</div>
+                <div style="font-size:46px; margin:6px 0;">🦆💨</div>
+                <div style="color:#fef08a; font-size:12px; font-weight:800; margin-bottom:12px;">OUT OF LIVES!</div>
+                <button id="btnReviveAd" onclick="requestRewardedAd('revive_life')" class="cookie-btn cookie-btn-green" style="width:100%; font-size:13px; margin-bottom:10px;">
+                  💖 REVIVE (+3 LIVES) 🎬
+                </button>
+                <button id="btnRetry" class="cookie-btn" style="width:100%; margin-bottom:8px;">RESTART STAGE</button>
                 <button id="btnHubReturn" class="cookie-btn cookie-btn-blue" style="width:100%;">STAGES MAP</button>
               </div>
             </div>
@@ -182,7 +201,9 @@ jobs:
 
           <script>
             let audioCtx = null;
-            let isBgmPlaying = false;
+            let currentAdRewardType = 'free_coins';
+            let targetThemeIdToUnlock = 0;
+
             function initAudio() {
               if (!audioCtx) {
                 const AudioClass = window.AudioContext || window.webkitAudioContext;
@@ -190,6 +211,7 @@ jobs:
               }
               if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             }
+
             function playTapSound() {
               initAudio();
               if (!audioCtx) return;
@@ -198,93 +220,124 @@ jobs:
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(480, now);
-                osc.frequency.exponentialRampToValueAtTime(750, now + 0.05);
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(700, now + 0.05);
                 gain.gain.setValueAtTime(0.2, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now);
-                osc.stop(now + 0.05);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.05);
               } catch (e) {}
             }
-            function startBGM() {
+
+            function playQuackSound(isBoss) {
               initAudio();
-              if (isBgmPlaying || !audioCtx) return;
-              isBgmPlaying = true;
-              const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 293.66, 349.23];
-              let step = 0;
-              setInterval(() => {
-                if (!isBgmPlaying || !audioCtx) return;
-                try {
-                  const now = audioCtx.currentTime;
-                  const osc = audioCtx.createOscillator();
-                  const gain = audioCtx.createGain();
-                  osc.type = 'triangle';
-                  osc.frequency.setValueAtTime(notes[step % notes.length], now);
-                  gain.gain.setValueAtTime(0.05, now);
-                  gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
-                  osc.connect(gain);
-                  gain.connect(audioCtx.destination);
-                  osc.start(now);
-                  osc.stop(now + 0.18);
-                  step++;
-                } catch(e) {}
-              }, 200);
+              if (!audioCtx) return;
+              try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                const baseF = isBoss ? 160 : 320;
+                osc.frequency.setValueAtTime(baseF, now);
+                osc.frequency.linearRampToValueAtTime(baseF - 50, now + 0.16);
+                gain.gain.setValueAtTime(isBoss ? 0.35 : 0.18, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.16);
+              } catch (e) {}
             }
+
+            function playDeflectSound() {
+              initAudio();
+              if (!audioCtx) return;
+              try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+              } catch (e) {}
+            }
+
+            function playRealGunSound(gunType) {
+              initAudio();
+              if (!audioCtx) return;
+              try {
+                const now = audioCtx.currentTime;
+                const bufferSize = audioCtx.sampleRate * 0.13;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                  data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.025));
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const noiseFilter = audioCtx.createBiquadFilter();
+                noiseFilter.type = 'lowpass';
+                noiseFilter.frequency.setValueAtTime(gunType === 'shotgun' ? 1200 : 2200, now);
+
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(0.8, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+
+                noise.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start(now);
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = gunType === 'plasma' ? 'sawtooth' : 'triangle';
+                const startFreq = gunType === 'sniper' ? 320 : (gunType === 'shotgun' ? 180 : 250);
+                osc.frequency.setValueAtTime(startFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.15);
+                gain.gain.setValueAtTime(0.9, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.15);
+              } catch(e) {}
+            }
+
             function playSound(type) {
               try {
                 initAudio();
                 if (!audioCtx) return;
                 const now = audioCtx.currentTime;
-                if (type === 'shoot') {
-                  const osc = audioCtx.createOscillator();
-                  const gain = audioCtx.createGain();
-                  osc.type = 'sawtooth';
-                  osc.frequency.setValueAtTime(450, now);
-                  osc.frequency.exponentialRampToValueAtTime(30, now + 0.14);
-                  gain.gain.setValueAtTime(0.7, now);
-                  gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
-                  osc.connect(gain);
-                  gain.connect(audioCtx.destination);
-                  osc.start(now);
-                  osc.stop(now + 0.14);
-                } else if (type === 'rocket') {
-                  const osc = audioCtx.createOscillator();
-                  const gain = audioCtx.createGain();
-                  osc.type = 'sawtooth';
-                  osc.frequency.setValueAtTime(220, now);
-                  osc.frequency.linearRampToValueAtTime(50, now + 0.35);
-                  gain.gain.setValueAtTime(0.85, now);
-                  gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
-                  osc.connect(gain);
-                  gain.connect(audioCtx.destination);
-                  osc.start(now);
-                  osc.stop(now + 0.35);
-                } else if (type === 'hit') {
+                if (type === 'hit') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
                   osc.type = 'triangle';
                   osc.frequency.setValueAtTime(620, now);
-                  osc.frequency.exponentialRampToValueAtTime(150, now + 0.16);
+                  osc.frequency.exponentialRampToValueAtTime(140, now + 0.14);
                   gain.gain.setValueAtTime(0.8, now);
-                  gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
-                  osc.connect(gain);
-                  gain.connect(audioCtx.destination);
-                  osc.start(now);
-                  osc.stop(now + 0.16);
-                } else if (type === 'reload') {
+                  gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+                  osc.connect(gain); gain.connect(audioCtx.destination);
+                  osc.start(now); osc.stop(now + 0.14);
+                } else if (type === 'fall') {
                   const osc = audioCtx.createOscillator();
                   const gain = audioCtx.createGain();
                   osc.type = 'sine';
                   osc.frequency.setValueAtTime(500, now);
-                  osc.frequency.setValueAtTime(800, now + 0.08);
+                  osc.frequency.exponentialRampToValueAtTime(80, now + 0.35);
+                  gain.gain.setValueAtTime(0.3, now);
+                  gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                  osc.connect(gain); gain.connect(audioCtx.destination);
+                  osc.start(now); osc.stop(now + 0.35);
+                } else if (type === 'reload') {
+                  const osc = audioCtx.createOscillator();
+                  const gain = audioCtx.createGain();
+                  osc.type = 'sine';
+                  osc.frequency.setValueAtTime(520, now);
+                  osc.frequency.setValueAtTime(840, now + 0.08);
                   gain.gain.setValueAtTime(0.3, now);
                   gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
-                  osc.connect(gain);
-                  gain.connect(audioCtx.destination);
-                  osc.start(now);
-                  osc.stop(now + 0.16);
+                  osc.connect(gain); gain.connect(audioCtx.destination);
+                  osc.start(now); osc.stop(now + 0.16);
                 } else if (type === 'win') {
                   [392, 523, 659, 784].forEach((freq, i) => {
                     const osc = audioCtx.createOscillator();
@@ -292,67 +345,89 @@ jobs:
                     osc.frequency.setValueAtTime(freq, now + i * 0.09);
                     gain.gain.setValueAtTime(0.35, now + i * 0.09);
                     gain.gain.linearRampToValueAtTime(0.01, now + i * 0.09 + 0.14);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start(now + i * 0.09);
-                    osc.stop(now + i * 0.09 + 0.14);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.09); osc.stop(now + i * 0.09 + 0.14);
                   });
                 }
               } catch (e) {}
             }
+
             function triggerAdMobInterstitial() {
               try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
             }
-            function requestRewardedAd() {
-              initAudio();
-              playTapSound();
-              const btn = document.getElementById('btnWatchAd');
-              if (btn) btn.innerText = '⏳ LOADING AD...';
+
+            function requestRewardedAd(type, themeId = 0) {
+              initAudio(); playTapSound();
+              currentAdRewardType = type;
+              targetThemeIdToUnlock = themeId;
               try {
                 if (window.AdMobBridge) {
                   window.AdMobBridge.postMessage('showRewarded');
                 } else {
-                  alert('Rewarded Ad mobile app me hi active hai.');
-                  if (btn) btn.innerText = '🎬 FREE 100 COINS';
+                  alert('Test Mode: Ad reward successful!');
+                  window.onRewardedAdReward();
                 }
               } catch (e) {
-                if (btn) btn.innerText = '🎬 FREE 100 COINS';
+                alert('Ad load nahi ho paaya, try again!');
               }
-              setTimeout(() => {
-                const b = document.getElementById('btnWatchAd');
-                if (b && b.innerText.includes('LOADING')) b.innerText = '🎬 FREE 100 COINS';
-              }, 6000);
             }
-            window.onAdLoadFailed = function() {
-              const b = document.getElementById('btnWatchAd');
-              if (b) b.innerText = '🎬 FREE 100 COINS';
-              alert('Ad load ho raha hai, kripya 3-4 second baad dobara tap karein!');
-            };
+
+            // AD REWARD HANDLER (COINS / THEMES / REVIVE)
             window.onRewardedAdReward = function() {
-              coins += 100;
-              saveState();
-              playSound('win');
-              alert('🎉 Badhai ho! 100 Coins mil gaye.');
-              const b = document.getElementById('btnWatchAd');
-              if (b) b.innerText = '🎬 FREE 100 COINS';
+              if (currentAdRewardType === 'free_coins') {
+                coins += 100;
+                saveState();
+                playSound('win');
+                alert('🎉 100 Coins mil gaye!');
+              } else if (currentAdRewardType === 'unlock_theme') {
+                if (!unlockedThemes.includes(targetThemeIdToUnlock)) {
+                  unlockedThemes.push(targetThemeIdToUnlock);
+                  activeTheme = targetThemeIdToUnlock;
+                  saveState();
+                  playSound('win');
+                  alert('🎨 Naya Theme Unlock ho gaya!');
+                  renderThemes();
+                }
+              } else if (currentAdRewardType === 'revive_life') {
+                lives = 3;
+                ammo = maxAmmo;
+                isReloading = false;
+                document.getElementById('gameOverScreen').style.display = 'none';
+                updateHud();
+                isRunning = true;
+                playSound('win');
+                loop();
+              }
             };
 
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
-            let coins = parseInt(localStorage.getItem('ds3d_coins') || '250');
+            let coins = parseInt(localStorage.getItem('ds3d_coins') || '300');
             let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_guns') || '[0]');
             let equippedGun = parseInt(localStorage.getItem('ds3d_equipped_gun') || '0');
+            let unlockedThemes = JSON.parse(localStorage.getItem('ds3d_themes') || '[0]');
+            let activeTheme = parseInt(localStorage.getItem('ds3d_active_theme') || '0');
             let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_max_lvl') || '0');
             let selectedLevel = 0;
 
             const REAL_GUNS = [
-              { id: 0, name: 'Glock 19', mag: 15, cost: 0, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
-              { id: 1, name: 'Colt .45', mag: 6, cost: 120, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
-              { id: 2, name: 'AK-47 Rifle', mag: 30, cost: 350, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
-              { id: 3, name: 'Combat Shotgun', mag: 8, cost: 480, sound: 'shoot', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
-              { id: 4, name: 'Missile Launcher', mag: 4, cost: 700, sound: 'rocket', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" }
+              { id: 0, name: 'Glock 19', mag: 15, cost: 0, damage: 1, sound: 'pistol', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
+              { id: 1, name: 'Colt .45', mag: 7, cost: 120, damage: 2, sound: 'pistol', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
+              { id: 2, name: 'Desert Eagle', mag: 8, cost: 250, damage: 2, sound: 'pistol', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
+              { id: 3, name: 'MP5 SMG', mag: 30, cost: 380, damage: 1, sound: 'pistol', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
+              { id: 4, name: 'M4A1 Carbine', mag: 35, cost: 520, damage: 2, sound: 'pistol', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
+              { id: 5, name: 'Combat Shotgun', mag: 8, cost: 650, damage: 3, sound: 'shotgun', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAAXNSR0IArs4c6QAAAYRJREFUaIHt172qgzAYBuDXw5mKS2cRvAIvwF5HL7Cz9+HSzU3oIIjQ7lIoEeyUYD3qqU2igb7Poi1JyPflV4CIiIi+lWeqod1up96TJOmyLDPW9pjj8dilaerd73etdownIEmS7nA4oCxLRFH08hwTRZF6nyozpq5rBEGA0+mkFcOvTuUpl8sFt9sNbdu+PKWqqrDf7wEAbduq//tl3lHXtXZfrSTgP2EYqvelQZtmdAmEYdiZau9dRVG4swTktPZ9f1E9IQQej4eqN/w9pyiK5R3tMZqAPM89AIjjuJOdb5rmT7l+YEuCtcHKMQi8JmGMEALX6xVVVak+fHJ86h6DP1q1PySEwPl89gBssm/0bZIAaTj6W/TByhIYm/5yL5hbFp/cHnWXwKr3ABm87WvyEsYTMLX5+b6PpmnUSeGKVfeArY66OUZnwNzR5+LoAyvOABdHHzA4A+Toj+32ro4+YGEGTG2ArrKyBFwOeGiVz+H+jc803YsQERERERERERERfZcnbfulgTXUVTcAAAAASUVORK5CYII=" },
+              { id: 6, name: 'AWP Sniper', mag: 5, cost: 850, damage: 5, sound: 'sniper', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" },
+              { id: 7, name: 'Plasma Cannon', mag: 6, cost: 1200, damage: 6, sound: 'plasma', src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAAn5JREFUaIHtl71OG0EQx3+7ex/GZ1mWgoT75BEsYeEoNHR2lyJNGsgp4llSp7hIfgyflCKKBEWqexAjocgmODjgu0nh3IGDkfxFwOF+1epmdjX/2Z25XcjJycnJycnJycl5kqhZHdvttgBUq1VarZYC6HQ6Msvc1H8VtNtkuRnDssy9SBpAt9vl6OgIz/Po9XpUKpUJv1qtlo2jKKLVai0fLdDtdoHJjVgGa9EgwjBka2sLgH6/z97eXmYPw3DqnFWyqvXmToDv+yoth5TNzU2iKLrlm347OTmZap+XIAhWVkopC52AVMxgMMDzPE5PT9nd3c3sYRgSRVFWBmEYTpTEIlSrVYIgWGqNaSzUA2AsqlQqAXB2dka5XMbzPGC8481mM0vUfezcqpgpsPevGmK0olIsggjPX78Brmt9OBxSKBQm5jSbzWzs+/56JmB/Z1uelTzQGkdrABIRXvxJwCw8ZvEA+i7Du5d18VwXozVF28KxLLTWaDXWM0tTe+zi4Y4meNCoS9F1cYzBaE2SCGih//MCYfwDSJua7/vq8PBQ0jrvdDqyyovPfXMrAQeNutiWYcO2sbSmf3FBeWOD3mDAx6/HY2Ffj4HrhhgEwUQS1olbJWAZg23bGK1RSlFyXeI4vhZ/g5t3gnUUD381wYNGXQqOQ6ngkiyYjB8wP39n4/v7OwDOeyfsCxPB7u9si2tZFFwHoxSWNgjCh89f1krUPEz0gCRJuIxHCKlwbRuIiZPkkkJ7N2Q94O12TWIRbGOBgqVARLC0ecj47p3sBIgIiQg/hkNc2+JqFOPaNo6Z6cm/tmQJ0FqTJAkKuBqNMMaQ/EoYyP+dgJycJ85vb6XwP63fq78AAAAASUVORK5CYII=" }
+            ];
+
+            const THEMES = [
+              { id: 0, name: 'Deep Marsh Lagoon', cost: 0, skyTop: '#2b3a4a', skyBottom: '#4b6584', waterTop: '#2d3d32', waterBottom: '#19241c', reeds: '#385038' },
+              { id: 1, name: 'Wild Pine Sunset', cost: 300, skyTop: '#6b2d18', skyBottom: '#e17055', waterTop: '#8c3d26', waterBottom: '#3d160c', reeds: '#572b15' },
+              { id: 2, name: 'Midnight Wetland', cost: 600, skyTop: '#0f172a', skyBottom: '#334155', waterTop: '#1e293b', waterBottom: '#020617', reeds: '#1e3a2f' },
+              { id: 3, name: 'Misty Swamp Forest', cost: 900, skyTop: '#1b4332', skyBottom: '#52b788', waterTop: '#2d6a4f', waterBottom: '#081c15', reeds: '#1b4332' }
             ];
 
             const gunSprites = [];
@@ -364,6 +439,8 @@ jobs:
               localStorage.setItem('ds3d_coins', coins);
               localStorage.setItem('ds3d_guns', JSON.stringify(unlockedGuns));
               localStorage.setItem('ds3d_equipped_gun', equippedGun);
+              localStorage.setItem('ds3d_themes', JSON.stringify(unlockedThemes));
+              localStorage.setItem('ds3d_active_theme', activeTheme);
               localStorage.setItem('ds3d_max_lvl', maxUnlockedLvl);
               const el = document.getElementById('hubCoins');
               if (el) el.innerText = coins;
@@ -371,64 +448,168 @@ jobs:
 
             let currentLvl = 0; let levelScore = 0; let lives = 3; 
             let maxAmmo = 15; let ammo = 15;
-            let isReloading = false; let ducks = []; let particles = []; let frame = 0; let isRunning = false; let recoilY = 0;
+            let isReloading = false; let ducks = []; let fallingDucks = []; let particles = []; 
+            let obstacles = []; let frame = 0; let isRunning = false; let recoilY = 0;
 
+            // DUCK CLASS (NORMAL & GIANT ARMORED BOSS)
             class Duck3D {
-              constructor(lvlCfg) {
+              constructor(lvlCfg, isBoss = false) {
+                this.isBoss = isBoss;
                 this.dir = Math.random() > 0.5 ? 1 : -1;
-                this.z = 0.6 + Math.random() * 0.8;
-                this.baseSize = 58;
-                this.x = this.dir === 1 ? -90 : V_W + 90;
-                this.y = 220 + Math.random() * 480;
-                this.speed = (lvlCfg.speed + Math.random() * 0.5) * this.z;
+                this.z = isBoss ? 1.6 : (0.7 + Math.random() * 0.7);
+                this.baseSize = isBoss ? 75 : 55;
+                this.x = this.dir === 1 ? -120 : V_W + 120;
+                this.y = 180 + Math.random() * 400;
+                // Realistic moderate speed: Boss flies slower & steady
+                this.speed = (isBoss ? 1.4 : (2.1 + Math.random() * 0.5)) * (this.isBoss ? 1 : this.z);
                 this.vx = this.speed * this.dir;
-                this.vy = (Math.random() - 0.5) * 1.6;
-                this.points = 15;
-                this.wing = 0;
+                this.vy = (Math.random() - 0.5) * (isBoss ? 0.8 : 1.4);
+                this.maxHp = isBoss ? (5 + Math.floor(currentLvl / 10) * 2) : 1;
+                this.hp = this.maxHp;
+                this.points = isBoss ? 60 : 15;
+                this.wingAngle = 0;
+                this.quackTimer = Math.floor(Math.random() * 80) + 20;
               }
               update() {
                 this.x += this.vx * (isReloading ? 0.4 : 1.0);
-                this.y += Math.sin(frame * 0.09) * 2.0 + this.vy;
-                this.wing += 0.25;
+                this.y += Math.sin(frame * 0.07) * (this.isBoss ? 1.2 : 2.0) + this.vy;
+                this.wingAngle += this.isBoss ? 0.22 : 0.36;
+                this.quackTimer--;
+                if (this.quackTimer <= 0 && isRunning) {
+                  playQuackSound(this.isBoss);
+                  this.quackTimer = 160 + Math.floor(Math.random() * 120);
+                }
               }
               draw() {
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.z * (this.dir < 0 ? -1 : 1), this.z);
+                
+                // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.beginPath(); ctx.ellipse(0, 35, 40, 10, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#f59e0b';
-                ctx.beginPath(); ctx.ellipse(0, 0, this.baseSize, this.baseSize * 0.65, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#d97706';
-                ctx.beginPath(); ctx.ellipse(-10, Math.sin(this.wing) * 10, 26, 14, -0.2, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#047857';
-                ctx.beginPath(); ctx.arc(36, -18, 22, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(0, this.baseSize * 0.7, this.baseSize * 0.65, 10, 0, 0, Math.PI * 2); ctx.fill();
+                
+                // Body
+                ctx.fillStyle = this.isBoss ? '#78350f' : '#f59e0b';
+                ctx.beginPath(); ctx.ellipse(0, 0, this.baseSize, this.baseSize * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+                
+                // Animated Flapping Wings
+                const wingSpread = Math.sin(this.wingAngle) * (this.isBoss ? 28 : 22);
+                ctx.fillStyle = this.isBoss ? '#451a03' : '#d97706';
+                ctx.beginPath();
+                ctx.ellipse(-10, wingSpread, this.baseSize * 0.5, this.baseSize * 0.28, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Head
+                ctx.fillStyle = this.isBoss ? '#14532d' : '#047857';
+                ctx.beginPath(); ctx.arc(this.baseSize * 0.6, -this.baseSize * 0.3, this.baseSize * 0.38, 0, Math.PI * 2); ctx.fill();
+                
+                // Beak
+                ctx.fillStyle = this.isBoss ? '#c2410c' : '#ea580c';
+                ctx.beginPath(); 
+                ctx.moveTo(this.baseSize * 0.85, -this.baseSize * 0.28); 
+                ctx.lineTo(this.baseSize * 1.3, -this.baseSize * 0.18); 
+                ctx.lineTo(this.baseSize * 0.85, -0.06); 
+                ctx.fill();
+                
+                // Eye
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(this.baseSize * 0.75, -this.baseSize * 0.38, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(this.baseSize * 0.78, -this.baseSize * 0.38, 2.5, 0, Math.PI * 2); ctx.fill();
+
+                // Boss Crown / Armor & HP Bar
+                if (this.isBoss) {
+                  ctx.fillStyle = '#facc15';
+                  ctx.font = 'bold 20px sans-serif';
+                  ctx.fillText('👑', -10, -this.baseSize * 0.6);
+
+                  // HP Bar
+                  const barW = 70;
+                  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                  ctx.fillRect(-barW / 2, -this.baseSize * 0.85, barW, 8);
+                  ctx.fillStyle = '#ef4444';
+                  ctx.fillRect(-barW / 2, -this.baseSize * 0.85, barW * (this.hp / this.maxHp), 8);
+                }
+                ctx.restore();
+              }
+            }
+
+            // CREATIVE MOVING OBSTACLE (BAMBOO LOG / INDUSTRIAL PIPE)
+            class ObstaclePipe {
+              constructor(x, speed) {
+                this.x = x;
+                this.w = 54;
+                this.y = 120;
+                this.h = 420;
+                this.speed = speed;
+                this.dir = 1;
+              }
+              update() {
+                this.y += this.speed * this.dir;
+                if (this.y < 80 || this.y > 260) this.dir *= -1;
+              }
+              draw() {
+                ctx.save();
+                const pipeGrad = ctx.createLinearGradient(this.x, 0, this.x + this.w, 0);
+                pipeGrad.addColorStop(0, '#334155'); pipeGrad.addColorStop(0.5, '#64748b'); pipeGrad.addColorStop(1, '#1e293b');
+                ctx.fillStyle = pipeGrad;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                // Metal bolts
+                ctx.fillStyle = '#94a3b8';
+                ctx.beginPath(); ctx.arc(this.x + 10, this.y + 20, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + this.w - 10, this.y + 20, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + 10, this.y + this.h - 20, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.x + this.w - 10, this.y + this.h - 20, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+              }
+            }
+
+            class FallingDuck {
+              constructor(x, y, z, dir, isBoss) {
+                this.x = x; this.y = y; this.z = z; this.dir = dir;
+                this.vy = 4; this.rotation = 0; this.spinSpeed = (Math.random() - 0.5) * 0.28;
+                this.isBoss = isBoss;
+              }
+              update() {
+                this.y += this.vy;
+                this.vy += 0.48; // Gravity
+                this.rotation += this.spinSpeed;
+              }
+              draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.scale(this.z * (this.dir < 0 ? -1 : 1), this.z);
+                ctx.fillStyle = this.isBoss ? '#451a03' : '#b45309';
+                ctx.beginPath(); ctx.ellipse(0, 0, 48, 28, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#ea580c';
-                ctx.beginPath(); ctx.moveTo(50, -16); ctx.lineTo(76, -11); ctx.lineTo(50, -4); ctx.fill();
-                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(44, -22, 4.5, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(45.5, -22, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(28, -10, 16, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
               }
             }
 
             class Particle {
-              constructor(x, y) {
+              constructor(x, y, color) {
                 this.x = x; this.y = y;
-                this.vx = (Math.random() - 0.5) * 12;
-                this.vy = (Math.random() - 0.5) * 12;
+                this.vx = (Math.random() - 0.5) * 14;
+                this.vy = (Math.random() - 0.5) * 14;
                 this.alpha = 1.0;
-                this.color = Math.random() > 0.5 ? '#fde047' : '#f97316';
+                this.color = color || (Math.random() > 0.5 ? '#fde047' : '#f97316');
               }
               update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.04; }
               draw() {
                 ctx.save(); ctx.globalAlpha = Math.max(0, this.alpha);
-                ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, 6, 6);
+                ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, 7, 7);
                 ctx.restore();
               }
             }
 
             function getLevelConfig(lvl) {
-              return { targetScore: 100 + lvl * 30, speed: 2.0 + Math.min(lvl * 0.09, 2.8), spawnInterval: Math.max(40, 70 - lvl) };
+              return { 
+                targetScore: 100 + lvl * 35, 
+                spawnInterval: Math.max(45, 75 - Math.min(lvl, 25)),
+                hasBoss: (lvl + 1) % 5 === 0,
+                obstacleCount: Math.min(2, Math.floor(lvl / 4))
+              };
             }
 
             function updateHud() {
@@ -441,12 +622,17 @@ jobs:
             }
 
             function startMission(lvlIndex) {
-              initAudio();
-              startBGM();
-              playTapSound();
+              initAudio(); playTapSound();
               currentLvl = lvlIndex; levelScore = 0; lives = 3;
               maxAmmo = REAL_GUNS[equippedGun]?.mag || 15; ammo = maxAmmo;
-              isReloading = false; ducks = []; particles = []; frame = 0; isRunning = true; recoilY = 0;
+              isReloading = false; ducks = []; fallingDucks = []; particles = []; obstacles = []; 
+              frame = 0; isRunning = true; recoilY = 0;
+
+              const cfg = getLevelConfig(currentLvl);
+              // Setup Creative Obstacles based on Level
+              if (cfg.obstacleCount >= 1) obstacles.push(new ObstaclePipe(V_W * 0.32, 1.2));
+              if (cfg.obstacleCount >= 2) obstacles.push(new ObstaclePipe(V_W * 0.65, 1.6));
+
               document.getElementById('homeScreen').style.display = 'none';
               document.getElementById('hubScreen').style.display = 'none';
               document.getElementById('winScreen').style.display = 'none';
@@ -456,14 +642,10 @@ jobs:
             }
 
             function showWinScreen() {
-              isRunning = false;
-              playSound('win');
+              isRunning = false; playSound('win');
               if (currentLvl + 1 > maxUnlockedLvl) { maxUnlockedLvl = Math.min(99, currentLvl + 1); saveState(); }
-              coins += 40; saveState();
+              coins += 50; saveState();
               document.getElementById('winScreen').style.display = 'flex';
-              document.getElementById('winStar1').classList.add('lit');
-              document.getElementById('winStar2').classList.add('lit');
-              document.getElementById('winStar3').classList.add('lit');
               triggerAdMobInterstitial();
             }
 
@@ -483,68 +665,126 @@ jobs:
               if (ammo <= 0 || isReloading) {
                 isReloading = true; updateHud();
                 playSound('reload');
-                setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 400);
+                setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 380);
                 return;
               }
 
-              ammo--; recoilY = 25;
+              ammo--; recoilY = 28;
               const gunObj = REAL_GUNS[equippedGun];
-              playSound(gunObj.sound || 'shoot');
+              playRealGunSound(gunObj.sound || 'pistol');
 
-              for (let i = ducks.length - 1; i >= 0; i--) {
-                const d = ducks[i];
-                if (Math.hypot(tx - d.x, ty - d.y) < d.baseSize * d.z * 1.3) {
-                  for (let p = 0; p < 14; p++) particles.push(new Particle(d.x, d.y));
-                  levelScore += d.points; coins += 3; saveState();
-                  playSound('hit');
-                  ducks.splice(i, 1);
+              // Check if bullet hit an Obstacle Pipe (Deflection)
+              let hitObstacle = false;
+              for (let obs of obstacles) {
+                if (tx >= obs.x && tx <= obs.x + obs.w && ty >= obs.y && ty <= obs.y + obs.h) {
+                  hitObstacle = true;
+                  playDeflectSound();
+                  for (let p = 0; p < 8; p++) particles.push(new Particle(tx, ty, '#cbd5e1'));
                   break;
                 }
               }
 
+              if (!hitObstacle) {
+                for (let i = ducks.length - 1; i >= 0; i--) {
+                  const d = ducks[i];
+                  if (Math.hypot(tx - d.x, ty - d.y) < d.baseSize * d.z * 1.35) {
+                    d.hp -= gunObj.damage;
+                    for (let p = 0; p < 12; p++) particles.push(new Particle(d.x, d.y));
+                    
+                    if (d.hp <= 0) {
+                      levelScore += d.points; 
+                      coins += d.isBoss ? 25 : 4; 
+                      saveState();
+                      playSound('hit');
+                      playSound('fall');
+                      fallingDucks.push(new FallingDuck(d.x, d.y, d.z, d.dir, d.isBoss));
+                      ducks.splice(i, 1);
+                    } else {
+                      playSound('hit');
+                      d.vx *= 1.15; // boss accelerates slightly on hit
+                    }
+                    break;
+                  }
+                }
+              }
+
               if (ammo <= 0) {
-                isReloading = true;
-                playSound('reload');
-                setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 400);
+                isReloading = true; playSound('reload');
+                setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 380);
               }
               updateHud();
-              if (levelScore >= getLevelConfig(currentLvl).targetScore) setTimeout(showWinScreen, 300);
+              if (levelScore >= getLevelConfig(currentLvl).targetScore) setTimeout(showWinScreen, 350);
             }
 
             function loop() {
               if (!isRunning) return;
               frame++;
-              if (recoilY > 0) recoilY -= 2.6;
+              if (recoilY > 0) recoilY -= 2.8;
 
               ctx.clearRect(0, 0, V_W, V_H);
+              
+              // DYNAMIC REALISTIC HUNTING SCENERY
+              const curTheme = THEMES[activeTheme] || THEMES[0];
               const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H * 0.65);
-              skyGrad.addColorStop(0, '#0284c7'); skyGrad.addColorStop(1, '#38bdf8');
+              skyGrad.addColorStop(0, curTheme.skyTop); skyGrad.addColorStop(1, curTheme.skyBottom);
               ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, V_W, V_H * 0.65);
 
+              // Distant Sun / Mist
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+              ctx.beginPath(); ctx.arc(V_W * 0.78, 170, 50, 0, Math.PI * 2); ctx.fill();
+
+              // Water Body
               const waterGrad = ctx.createLinearGradient(0, V_H * 0.65, 0, V_H);
-              waterGrad.addColorStop(0, '#0369a1'); waterGrad.addColorStop(1, '#082f49');
+              waterGrad.addColorStop(0, curTheme.waterTop); waterGrad.addColorStop(1, curTheme.waterBottom);
               ctx.fillStyle = waterGrad; ctx.fillRect(0, V_H * 0.65, V_W, V_H * 0.35);
 
+              // Spawn Regular Ducks or Boss
               const cfg = getLevelConfig(currentLvl);
-              if (frame % cfg.spawnInterval === 0 && ducks.length < 5) ducks.push(new Duck3D(cfg));
+              if (frame % cfg.spawnInterval === 0 && ducks.length < 5) {
+                const spawnBoss = cfg.hasBoss && !ducks.some(d => d.isBoss) && Math.random() > 0.4;
+                ducks.push(new Duck3D(cfg, spawnBoss));
+              }
 
+              // Update & Draw Ducks
               for (let i = ducks.length - 1; i >= 0; i--) {
                 const d = ducks[i]; d.update(); d.draw();
-                if ((d.dir === 1 && d.x > V_W + 100) || (d.dir === -1 && d.x < -100)) {
-                  ducks.splice(i, 1); lives--; updateHud();
+                if ((d.dir === 1 && d.x > V_W + 130) || (d.dir === -1 && d.x < -130)) {
+                  ducks.splice(i, 1); 
+                  lives -= d.isBoss ? 2 : 1; 
+                  updateHud();
                   if (lives <= 0) { endGame(); return; }
                 }
               }
 
+              // Update & Draw Obstacles (Pipes block bullets & ducks)
+              for (let obs of obstacles) {
+                obs.update(); obs.draw();
+              }
+
+              // Falling Ducks
+              for (let i = fallingDucks.length - 1; i >= 0; i--) {
+                const fd = fallingDucks[i]; fd.update(); fd.draw();
+                if (fd.y > V_H + 90) fallingDucks.splice(i, 1);
+              }
+
+              // Particles
               for (let i = particles.length - 1; i >= 0; i--) {
                 particles[i].update(); particles[i].draw();
                 if (particles[i].alpha <= 0) particles.splice(i, 1);
               }
 
+              // Realistic Marsh Reeds (Foreground Hunter Blind)
+              ctx.fillStyle = curTheme.reeds;
+              for (let r = 0; r < V_W; r += 18) {
+                const rH = 80 + Math.sin(r + frame * 0.05) * 20;
+                ctx.fillRect(r, V_H - rH, 7, rH);
+              }
+
+              // Render Gun at Bottom Center
               const gunImg = gunSprites[equippedGun];
               if (gunImg && gunImg.complete) {
                 ctx.save();
-                ctx.translate(V_W / 2, V_H - 90 + recoilY);
+                ctx.translate(V_W / 2, V_H - 95 + recoilY);
                 ctx.rotate(-Math.PI / 2);
                 ctx.drawImage(gunImg, -70, -35, 140, 70);
                 ctx.restore();
@@ -557,22 +797,22 @@ jobs:
               playTapSound();
               const road = document.getElementById('hubListRoad');
               const armory = document.getElementById('hubListArmory');
+              const themes = document.getElementById('hubListThemes');
               const btnRoad = document.getElementById('tabLevels');
               const btnArmory = document.getElementById('tabGuns');
+              const btnThemes = document.getElementById('tabThemes');
 
-              if (tab === 'levels') {
-                road.style.display = 'block';
-                armory.style.display = 'none';
-                btnRoad.className = 'cookie-btn';
-                btnArmory.className = 'cookie-btn cookie-btn-blue';
-                renderRoad();
-              } else {
-                road.style.display = 'none';
-                armory.style.display = 'grid';
-                btnRoad.className = 'cookie-btn cookie-btn-blue';
-                btnArmory.className = 'cookie-btn';
-                renderArmory();
-              }
+              road.style.display = tab === 'levels' ? 'block' : 'none';
+              armory.style.display = tab === 'guns' ? 'grid' : 'none';
+              themes.style.display = tab === 'themes' ? 'grid' : 'none';
+
+              btnRoad.className = tab === 'levels' ? 'cookie-btn' : 'cookie-btn cookie-btn-blue';
+              btnArmory.className = tab === 'guns' ? 'cookie-btn' : 'cookie-btn cookie-btn-blue';
+              btnThemes.className = tab === 'themes' ? 'cookie-btn' : 'cookie-btn cookie-btn-purple';
+
+              if (tab === 'levels') renderRoad();
+              if (tab === 'guns') renderArmory();
+              if (tab === 'themes') renderThemes();
             };
 
             function renderRoad() {
@@ -582,16 +822,17 @@ jobs:
                 const row = document.createElement('div');
                 row.className = 'flow-node-row';
                 const offsetPercent = 50 + Math.sin(i * 0.7) * 32;
+                const isBossStage = (i + 1) % 5 === 0;
                 const bubble = document.createElement('div');
-                bubble.className = `level-bubble ${i <= maxUnlockedLvl ? '' : 'locked'} ${selectedLevel === i ? 'active-node' : ''}`;
+                bubble.className = `level-bubble ${i <= maxUnlockedLvl ? '' : 'locked'} ${selectedLevel === i ? 'active-node' : ''} ${isBossStage ? 'boss-node' : ''}`;
                 bubble.style.left = `${offsetPercent}%`;
-                bubble.innerHTML = `<small style="font-size:10px;">LVL</small><b style="font-size:17px;">${i + 1}</b>`;
-
+                bubble.innerHTML = isBossStage 
+                  ? `<small style="font-size:9px; color:#fee2e2;">BOSS</small><b style="font-size:16px;">${i + 1}</b>`
+                  : `<small style="font-size:10px;">LVL</small><b style="font-size:17px;">${i + 1}</b>`;
                 if (i <= maxUnlockedLvl) {
                   bubble.onclick = () => { playTapSound(); selectedLevel = i; renderRoad(); };
                 }
-                row.appendChild(bubble);
-                container.appendChild(row);
+                row.appendChild(bubble); container.appendChild(row);
               }
             }
 
@@ -602,11 +843,10 @@ jobs:
                 const card = document.createElement('div');
                 card.className = `hub-card ${equippedGun === g.id ? 'active-item' : ''}`;
                 const isUnlocked = unlockedGuns.includes(g.id);
-
                 card.innerHTML = `
-                  <strong style="color:#ffdf79; font-size:14px;">${g.name}</strong>
+                  <strong style="color:#ffdf79; font-size:13px;">${g.name}</strong>
                   <img src="${g.src}" alt="${g.name}">
-                  <span style="color:#a7f3d0; font-size:11px; font-weight:800; margin-bottom:6px;">AMMO: ${g.mag}</span>
+                  <div style="font-size:10px; color:#a7f3d0; font-weight:800; margin-bottom:4px;">DMG: ${g.damage} | MAG: ${g.mag}</div>
                   ${
                     isUnlocked
                       ? `<button class="cookie-btn ${equippedGun === g.id ? 'cookie-btn-green' : 'cookie-btn-blue'}" style="padding:6px 14px; font-size:11px;" onclick="equipGun(${g.id})">
@@ -621,60 +861,76 @@ jobs:
               });
             }
 
-            window.equipGun = function(id) {
-              playTapSound();
-              equippedGun = id; saveState(); renderArmory();
-            };
+            function renderThemes() {
+              const container = document.getElementById('hubListThemes');
+              container.innerHTML = '';
+              THEMES.forEach(t => {
+                const card = document.createElement('div');
+                card.className = `hub-card ${activeTheme === t.id ? 'active-item' : ''}`;
+                const isUnlocked = unlockedThemes.includes(t.id);
+                card.innerHTML = `
+                  <strong style="color:#fef08a; font-size:13px; margin-bottom:6px;">${t.name}</strong>
+                  <div class="theme-preview-box" style="background: linear-gradient(180deg, ${t.skyBottom} 0%, ${t.waterTop} 100%);"></div>
+                  ${
+                    isUnlocked
+                      ? `<button class="cookie-btn ${activeTheme === t.id ? 'cookie-btn-green' : 'cookie-btn-blue'}" style="padding:6px 12px; font-size:11px;" onclick="equipTheme(${t.id})">
+                          ${activeTheme === t.id ? 'SELECTED' : 'SELECT'}
+                        </button>`
+                      : `<div style="display:flex; flex-direction:column; gap:5px; width:100%;">
+                          <button class="cookie-btn" style="padding:5px; font-size:10px;" onclick="buyTheme(${t.id}, ${t.cost})">🪙 ${t.cost} COINS</button>
+                          <button class="cookie-btn cookie-btn-purple" style="padding:5px; font-size:10px;" onclick="requestRewardedAd('unlock_theme', ${t.id})">🎬 UNLOCK WITH AD</button>
+                        </div>`
+                  }
+                `;
+                container.appendChild(card);
+              });
+            }
 
+            window.equipGun = function(id) { playTapSound(); equippedGun = id; saveState(); renderArmory(); };
             window.buyGun = function(id, cost) {
               playTapSound();
               if (coins >= cost) {
-                coins -= cost; unlockedGuns.push(id); equippedGun = id;
-                saveState(); renderArmory();
-              } else {
-                alert('Coins kam hain! Aur ducks shoot karein ya ad dekhein.');
-              }
+                coins -= cost; unlockedGuns.push(id); equippedGun = id; saveState(); renderArmory();
+              } else { alert('Coins kam hain! Aur ducks hunt karein ya ad dekhein.'); }
+            };
+
+            window.equipTheme = function(id) { playTapSound(); activeTheme = id; saveState(); renderThemes(); };
+            window.buyTheme = function(id, cost) {
+              playTapSound();
+              if (coins >= cost) {
+                coins -= cost; unlockedThemes.push(id); activeTheme = id; saveState(); renderThemes();
+              } else { alert('Coins kam hain! Ya ad dekhkar unlock karein.'); }
             };
 
             canvas.addEventListener('pointerdown', (e) => handleShoot(e.clientX, e.clientY));
             document.getElementById('reloadBtn').addEventListener('pointerdown', (e) => {
               e.stopPropagation(); isReloading = true; updateHud();
               playSound('reload');
-              setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 400);
+              setTimeout(() => { ammo = maxAmmo; isReloading = false; updateHud(); }, 380);
             });
             document.getElementById('btnAbortExit').onclick = () => {
-              playTapSound();
-              isRunning = false; 
-              document.getElementById('hubScreen').style.display = 'flex'; 
-              switchHub('levels');
+              playTapSound(); isRunning = false; 
+              document.getElementById('hubScreen').style.display = 'flex'; switchHub('levels');
             };
             document.getElementById('btnEnterHub').onclick = () => {
-              initAudio();
-              startBGM();
-              playTapSound();
+              initAudio(); playTapSound();
               document.getElementById('homeScreen').style.display = 'none';
-              document.getElementById('hubScreen').style.display = 'flex';
-              switchHub('levels');
+              document.getElementById('hubScreen').style.display = 'flex'; switchHub('levels');
             };
             document.getElementById('btnBackToHome').onclick = () => {
-              playTapSound();
-              document.getElementById('hubScreen').style.display = 'none';
+              playTapSound(); document.getElementById('hubScreen').style.display = 'none';
               document.getElementById('homeScreen').style.display = 'flex';
             };
             document.getElementById('btnStartMission').onclick = () => startMission(selectedLevel);
             document.getElementById('btnNextLevel').onclick = () => startMission(currentLvl + 1);
             document.getElementById('btnWinHub').onclick = () => {
-              playTapSound();
-              document.getElementById('winScreen').style.display = 'none';
-              document.getElementById('hubScreen').style.display = 'flex';
-              switchHub('levels');
+              playTapSound(); document.getElementById('winScreen').style.display = 'none';
+              document.getElementById('hubScreen').style.display = 'flex'; switchHub('levels');
             };
             document.getElementById('btnRetry').onclick = () => startMission(currentLvl);
             document.getElementById('btnHubReturn').onclick = () => {
-              playTapSound();
-              document.getElementById('gameOverScreen').style.display = 'none';
-              document.getElementById('hubScreen').style.display = 'flex';
-              switchHub('levels');
+              playTapSound(); document.getElementById('gameOverScreen').style.display = 'none';
+              document.getElementById('hubScreen').style.display = 'flex'; switchHub('levels');
             };
 
             saveState();
