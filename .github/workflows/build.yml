@@ -31,7 +31,7 @@ jobs:
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.7.0+8
+        version: 1.8.0+9
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -52,7 +52,7 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter3d
 
-    - name: Write Clean lib/main.dart (Persistent Save + Instant Ad Fallback)
+    - name: Write Clean lib/main.dart (Strict Real Ads + Auto Show on Load)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -86,6 +86,7 @@ jobs:
           RewardedAd? _rewardedAd;
           InterstitialAd? _interstitialAd;
           bool _isLoadingRewarded = false;
+          bool _waitingToShowRewarded = false;
 
           @override
           void initState() {
@@ -111,7 +112,6 @@ jobs:
           }
 
           Future<void> _initWebViewKeepingSaveData() async {
-            // ONLY clear file cache, DO NOT clearLocalStorage so levels & guns stay saved forever!
             await _controller.clearCache();
             await _controller.loadFlutterAsset('assets/index.html');
           }
@@ -121,25 +121,41 @@ jobs:
               adUnitId: 'ca-app-pub-1590363558146928/8937070118',
               request: const AdRequest(),
               adLoadCallback: InterstitialAdLoadCallback(
-                onAdLoaded: (ad) => _interstitialAd = ad,
-                onAdFailedToLoad: (error) => _interstitialAd = null,
+                onAdLoaded: (ad) {
+                  _interstitialAd = ad;
+                },
+                onAdFailedToLoad: (error) {
+                  _interstitialAd = null;
+                },
               ),
             );
           }
 
           void _showInterstitialAd() {
             if (_interstitialAd != null) {
+              _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+                onAdDismissedFullScreenContent: (ad) {
+                  ad.dispose();
+                  _interstitialAd = null;
+                  _loadInterstitialAd();
+                },
+                onAdFailedToShowFullScreenContent: (ad, error) {
+                  ad.dispose();
+                  _interstitialAd = null;
+                  _loadInterstitialAd();
+                },
+              );
               _interstitialAd!.show();
               _interstitialAd = null;
-              _loadInterstitialAd();
             } else {
               _loadInterstitialAd();
             }
           }
 
           void _loadRewardedAd() {
-            if (_isLoadingRewarded) return;
+            if (_isLoadingRewarded || _rewardedAd != null) return;
             _isLoadingRewarded = true;
+
             RewardedAd.load(
               adUnitId: 'ca-app-pub-1590363558146928/6265005825',
               request: const AdRequest(),
@@ -147,10 +163,20 @@ jobs:
                 onAdLoaded: (ad) {
                   _rewardedAd = ad;
                   _isLoadingRewarded = false;
+                  // Agar user ne button dabaya tha aur ad abhi load hua hai, toh turant dikhao!
+                  if (_waitingToShowRewarded) {
+                    _waitingToShowRewarded = false;
+                    _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
+                    _showRewardedAd();
+                  }
                 },
                 onAdFailedToLoad: (error) {
                   _rewardedAd = null;
                   _isLoadingRewarded = false;
+                  if (_waitingToShowRewarded) {
+                    _waitingToShowRewarded = false;
+                    _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
+                  }
                 },
               ),
             );
@@ -158,34 +184,35 @@ jobs:
 
           void _showRewardedAd() {
             if (_rewardedAd != null) {
+              _waitingToShowRewarded = false;
+              _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
+
               _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
                 onAdDismissedFullScreenContent: (ad) {
                   ad.dispose();
                   _rewardedAd = null;
-                  _loadRewardedAd();
+                  _loadRewardedAd(); // Agle reward ke liye turant preload shuru
                 },
                 onAdFailedToShowFullScreenContent: (ad, error) {
                   ad.dispose();
                   _rewardedAd = null;
-                  _controller.runJavaScript('window.onRewardedAdReward();');
+                  _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
                   _loadRewardedAd();
                 },
               );
+
               _rewardedAd!.show(
                 onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+                  // STRICT: Sirf jab user sach me ad dekhega tabhi reward milega!
                   _controller.runJavaScript('window.onRewardedAdReward();');
                 },
               );
               _rewardedAd = null;
             } else {
+              // Ad abhi preload ho raha hai, toh loading overlay dikhao aur load hote hi auto-play karo
+              _waitingToShowRewarded = true;
+              _controller.runJavaScript('if(window.showAdLoadingOverlay) window.showAdLoadingOverlay();');
               _loadRewardedAd();
-              Future.delayed(const Duration(milliseconds: 1500), () {
-                if (_rewardedAd != null) {
-                  _showRewardedAd();
-                } else {
-                  _controller.runJavaScript('window.onRewardedAdReward();');
-                }
-              });
             }
           }
 
@@ -228,8 +255,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 8
-                versionName = "1.7.0"
+                versionCode = 9
+                versionName = "1.8.0"
                 multiDexEnabled = true
             }
 
@@ -262,7 +289,6 @@ jobs:
             html, body { width: 100%; height: 100%; overflow: hidden; background: #080301; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
             #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
             
-            /* SEPARATED LAYER CANVASES - ZERO OVERLAP */
             #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; z-index: 10; cursor: crosshair; }
             #homeCanvasBg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
             
@@ -302,7 +328,6 @@ jobs:
             .ribbon-banner { background: linear-gradient(180deg, #ffdc33 0%, #f39c12 50%, #d35400 100%); border: 3px solid #fff2a3; border-radius: 18px; padding: 8px 30px; color: #fff; font-size: 22px; font-weight: 900; margin-top: -38px; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
             .ribbon-banner.lose { background: linear-gradient(180deg, #ff7675 0%, #d63031 50%, #7c0b0b 100%); border-color: #ffcccc; }
             
-            /* HIDDEN BY DEFAULT SO IT NEVER OVERLAPS HOME OR HUB */
             .gameplay-hud { position: absolute; top: 12px; left: 12px; right: 12px; display: none; justify-content: space-between; z-index: 30; pointer-events: none; }
             .hud-cookie-pill { background: rgba(24, 12, 5, 0.92); border: 2px solid #e08b26; color: #fff; padding: 4px 10px; border-radius: 16px; font-size: 11px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.6); }
             .gameplay-controls { position: absolute; bottom: 18px; left: 14px; right: 14px; display: none; justify-content: space-between; z-index: 30; pointer-events: none; }
@@ -320,10 +345,20 @@ jobs:
             .gun-svg-box { width: 135px; height: 64px; display: flex; align-items: center; justify-content: center; margin: 4px 0; background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 70%); border-radius: 12px; }
             .gun-svg-box img { width: 125px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.85)); }
             .theme-preview-box { width: 100%; height: 80px; border-radius: 14px; margin: 6px 0 10px 0; border: 2.5px solid #fde047; position: relative; overflow: hidden; box-shadow: inset 0 0 12px rgba(0,0,0,0.6); }
+
+            /* AD LOADING OVERLAY */
+            #adLoadingModal { position: absolute; inset: 0; background: rgba(0,0,0,0.82); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; color: #fef08a; font-weight: 900; }
           </style>
         </head>
         <body>
           <div id="phoneContainer">
+            <!-- AD LOADING OVERLAY -->
+            <div id="adLoadingModal">
+              <div style="font-size:44px; margin-bottom:10px;">🎬</div>
+              <div style="font-size:16px;">LOADING VIDEO AD...</div>
+              <div style="font-size:11px; color:#cbd5e1; margin-top:6px;">Please wait 2-3 seconds</div>
+            </div>
+
             <!-- HOME BACKGROUND CANVAS -->
             <canvas id="homeCanvasBg" width="720" height="1280"></canvas>
 
@@ -349,7 +384,7 @@ jobs:
 
               <div class="home-bottom-actions">
                 <button id="btnEnterHub" class="play-pulse-btn">⚡ ENTER EXPEDITION</button>
-                <button id="btnWatchAd" onclick="requestRewardedAd('free_coins')" class="cookie-btn cookie-btn-green" style="width:88%; font-size:13px;">🎬 CLAIM 100 FREE COINS</button>
+                <button id="btnWatchAd" onclick="requestRewardedAd('free_coins')" class="cookie-btn cookie-btn-green" style="width:88%; font-size:13px;">🎬 WATCH AD FOR 100 COINS</button>
                 <a href="https://youtube.com/@thegovindgupta?si=gXoJJdVou07U7r1m" target="_blank" style="color:#fecaca; text-decoration:none; font-weight:800; font-size:12px; text-shadow:0 2px 4px #000; margin-top:2px;">🔴 Channel: @thegovindgupta</a>
               </div>
             </div>
@@ -377,7 +412,7 @@ jobs:
               </div>
             </div>
 
-            <!-- GAMEPLAY HUD (HIDDEN UNTIL MISSION STARTS) -->
+            <!-- GAMEPLAY HUD -->
             <div id="gameplayHud" class="gameplay-hud">
               <button id="btnAbortExit" class="cookie-btn cookie-btn-red" style="pointer-events:auto; padding:5px 12px; font-size:11px;">✖ EXIT</button>
               <div class="hud-cookie-pill"><small>STAGE</small><strong id="uiLvl">1/100</strong></div>
@@ -410,7 +445,7 @@ jobs:
                 <div style="font-size:46px; margin:6px 0;">🦆💨</div>
                 <div style="color:#fef08a; font-size:12px; font-weight:800; margin-bottom:12px;">OUT OF LIVES!</div>
                 <button id="btnReviveAd" onclick="requestRewardedAd('revive_life')" class="cookie-btn cookie-btn-green" style="width:100%; font-size:13px; margin-bottom:10px;">
-                  💖 REVIVE (+3 LIVES) 🎬
+                  💖 WATCH AD TO REVIVE (+3 ❤)
                 </button>
                 <button id="btnRetry" class="cookie-btn" style="width:100%; margin-bottom:8px;">RESTART STAGE</button>
                 <button id="btnHubReturn" class="cookie-btn cookie-btn-blue" style="width:100%;">STAGES MAP</button>
@@ -456,7 +491,6 @@ jobs:
               } catch (e) {}
             }
 
-            // REALISTIC DOUBLE-QUACK NASAL DUCK CALL
             function playQuackSound(isBoss) {
               if (isMuted) return;
               initAudio();
@@ -474,7 +508,6 @@ jobs:
                   osc.frequency.setValueAtTime(basePitch, t);
                   osc.frequency.exponentialRampToValueAtTime(basePitch * 0.68, t + 0.12);
 
-                  // Nasal formant resonance
                   filter.type = 'bandpass';
                   filter.frequency.setValueAtTime(isBoss ? 650 : 1250, t);
                   filter.Q.setValueAtTime(4.5, t);
@@ -607,6 +640,13 @@ jobs:
               } catch (e) {}
             }
 
+            window.showAdLoadingOverlay = function() {
+              document.getElementById('adLoadingModal').style.display = 'flex';
+            };
+            window.hideAdLoadingOverlay = function() {
+              document.getElementById('adLoadingModal').style.display = 'none';
+            };
+
             function triggerAdMobInterstitial() {
               try { if (window.AdMobBridge) window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {}
             }
@@ -615,18 +655,21 @@ jobs:
               initAudio(); playTapSound();
               currentAdRewardType = type;
               targetItemIdToUnlock = itemId;
-              try {
-                if (window.AdMobBridge) {
-                  window.AdMobBridge.postMessage('showRewarded');
-                } else {
-                  window.onRewardedAdReward();
-                }
-              } catch (e) {
-                window.onRewardedAdReward();
+              if (window.AdMobBridge) {
+                window.AdMobBridge.postMessage('showRewarded');
+              } else {
+                alert('Ads sirf mobile APK par chalte hain.');
               }
             }
 
+            window.onAdLoadFailed = function() {
+              window.hideAdLoadingOverlay();
+              alert('Network slow hai ya AdMob par abhi video ad available nahi hai. Kripya internet check karke dobara tap karein!');
+            };
+
+            // STRICT REWARD CALLBACK: ONLY CALLED WHEN USER COMPLETES AD
             window.onRewardedAdReward = function() {
+              window.hideAdLoadingOverlay();
               if (currentAdRewardType === 'free_coins') {
                 coins += 100; saveState(); playSound('win');
                 alert('🎉 +100 Hunt Coins Mil Gaye!');
@@ -660,7 +703,6 @@ jobs:
             const homeCtx = homeCanvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
-            // PERSISTENT STORAGE LOADING
             let coins = parseInt(localStorage.getItem('ds3d_coins') || '300');
             let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_guns') || '[0]');
             let equippedGun = parseInt(localStorage.getItem('ds3d_equipped_gun') || '0');
@@ -669,18 +711,14 @@ jobs:
             let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_max_lvl') || '0');
             let selectedLevel = maxUnlockedLvl;
 
-            // CRISP HD VECTOR SVG GUN SPRITES
             function makeGunSvg(bodyColor, accentColor, barrelLen, hasScope, isFuturistic) {
               const scopeSvg = hasScope ? `<rect x="55" y="6" width="42" height="10" rx="3" fill="#1e293b" stroke="${accentColor}" stroke-width="2"/><line x1="65" y1="16" x2="65" y2="24" stroke="#94a3b8" stroke-width="3"/><line x1="87" y1="16" x2="87" y2="24" stroke="#94a3b8" stroke-width="3"/>` : '';
               const glowSvg = isFuturistic ? `<rect x="45" y="27" width="${barrelLen - 20}" height="6" rx="3" fill="#38bdf8"/>` : '';
               const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 80">
                 ${scopeSvg}
-                <!-- Stock & Grip -->
                 <path d="M15,58 L35,28 L65,28 L52,68 L28,68 Z" fill="${accentColor}" stroke="#0f172a" stroke-width="3"/>
-                <!-- Receiver & Barrel -->
                 <rect x="35" y="22" width="${barrelLen}" height="18" rx="4" fill="${bodyColor}" stroke="#0f172a" stroke-width="3"/>
                 <rect x="${35 + barrelLen - 12}" y="18" width="12" height="24" rx="2" fill="#0f172a"/>
-                <!-- Trigger Guard -->
                 <path d="M55,40 Q65,55 75,40" fill="none" stroke="#94a3b8" stroke-width="3"/>
                 ${glowSvg}
               </svg>`;
@@ -735,7 +773,6 @@ jobs:
               { x: 420, y: 210, w: 220, h: 55, speed: 0.5 }
             ];
 
-            // RICH SCENERY RENDERER FOR BOTH HOME AND GAMEPLAY
             function renderRichScenery(targetCtx, themeObj, animFrame) {
               const skyGrad = targetCtx.createLinearGradient(0, 0, 0, V_H * 0.66);
               skyGrad.addColorStop(0, themeObj.skyTop);
@@ -743,7 +780,6 @@ jobs:
               targetCtx.fillStyle = skyGrad;
               targetCtx.fillRect(0, 0, V_W, V_H * 0.66);
 
-              // Glowing Sun / Moon
               targetCtx.fillStyle = themeObj.sunColor;
               targetCtx.globalAlpha = 0.25;
               targetCtx.beginPath(); targetCtx.arc(V_W * 0.78, 175, 76, 0, Math.PI * 2); targetCtx.fill();
@@ -751,7 +787,6 @@ jobs:
               targetCtx.beginPath(); targetCtx.arc(V_W * 0.78, 175, 46, 0, Math.PI * 2); targetCtx.fill();
               targetCtx.globalAlpha = 1.0;
 
-              // Clouds
               targetCtx.fillStyle = 'rgba(255, 255, 255, 0.28)';
               homeClouds.forEach(c => {
                 c.x += c.speed;
@@ -761,7 +796,6 @@ jobs:
                 targetCtx.fill();
               });
 
-              // Distant 3D Mountain Peaks
               targetCtx.fillStyle = themeObj.mountColor;
               targetCtx.beginPath();
               targetCtx.moveTo(0, V_H * 0.66);
@@ -773,7 +807,6 @@ jobs:
               targetCtx.closePath();
               targetCtx.fill();
 
-              // Pine Tree Forest Line on Horizon
               targetCtx.fillStyle = themeObj.treeColor;
               for (let tx = 0; tx < V_W; tx += 36) {
                 const treeH = 55 + (tx % 3) * 18;
@@ -784,14 +817,12 @@ jobs:
                 targetCtx.fill();
               }
 
-              // Lake Water
               const waterGrad = targetCtx.createLinearGradient(0, V_H * 0.66, 0, V_H);
               waterGrad.addColorStop(0, themeObj.waterTop);
               waterGrad.addColorStop(1, themeObj.waterBottom);
               targetCtx.fillStyle = waterGrad;
               targetCtx.fillRect(0, V_H * 0.66, V_W, V_H * 0.34);
 
-              // Animated Water Shimmer Waves
               targetCtx.fillStyle = 'rgba(255, 255, 255, 0.16)';
               for (let wy = V_H * 0.69; wy < V_H - 90; wy += 38) {
                 const waveOffset = Math.sin(animFrame * 0.04 + wy) * 30;
@@ -800,14 +831,12 @@ jobs:
               }
             }
 
-            // DETAILED REALISTIC DUCK PAINTER
             function paintDetailedDuck(targetCtx, baseSize, wingY, isBoss, isDead, hpRatio) {
               if (!isDead) {
                 targetCtx.fillStyle = 'rgba(0,0,0,0.22)';
                 targetCtx.beginPath(); targetCtx.ellipse(0, baseSize * 0.72, baseSize * 0.65, 9, 0, 0, Math.PI * 2); targetCtx.fill();
               }
 
-              // Tail feathers
               targetCtx.fillStyle = '#451a03';
               targetCtx.beginPath();
               targetCtx.moveTo(-baseSize * 0.75, 0);
@@ -815,32 +844,27 @@ jobs:
               targetCtx.lineTo(-baseSize * 1.15, baseSize * 0.15);
               targetCtx.fill();
 
-              // Back Wing
               targetCtx.fillStyle = isBoss ? '#451a03' : '#92400e';
               targetCtx.beginPath();
               targetCtx.ellipse(-8, -wingY * 0.7, baseSize * 0.45, baseSize * 0.24, -0.3, 0, Math.PI * 2);
               targetCtx.fill();
 
-              // Main Plumage Body
               targetCtx.fillStyle = isBoss ? '#78350f' : '#d97706';
               targetCtx.beginPath();
               targetCtx.ellipse(0, 0, baseSize, baseSize * 0.58, 0, 0, Math.PI * 2);
               targetCtx.fill();
 
-              // White Neck Ring
               targetCtx.strokeStyle = '#ffffff';
               targetCtx.lineWidth = 4;
               targetCtx.beginPath();
               targetCtx.arc(baseSize * 0.48, -baseSize * 0.14, baseSize * 0.18, 0.3, 1.8);
               targetCtx.stroke();
 
-              // Iridescent Mallard Green Head
               targetCtx.fillStyle = isBoss ? '#14532d' : '#047857';
               targetCtx.beginPath();
               targetCtx.arc(baseSize * 0.62, -baseSize * 0.32, baseSize * 0.36, 0, Math.PI * 2);
               targetCtx.fill();
 
-              // Yellow/Orange Beak
               targetCtx.fillStyle = isBoss ? '#ef4444' : '#f97316';
               targetCtx.beginPath();
               targetCtx.moveTo(baseSize * 0.88, -baseSize * 0.38);
@@ -848,7 +872,6 @@ jobs:
               targetCtx.lineTo(baseSize * 0.88, -baseSize * 0.12);
               targetCtx.fill();
 
-              // Eyes (X_X if shot dead, else glossy eye)
               if (isDead) {
                 targetCtx.strokeStyle = '#000';
                 targetCtx.lineWidth = 3;
@@ -864,7 +887,6 @@ jobs:
                 targetCtx.beginPath(); targetCtx.arc(baseSize * 0.75, -baseSize * 0.38, 2.8, 0, Math.PI * 2); targetCtx.fill();
               }
 
-              // Foreground Articulated Flapping Wing
               targetCtx.fillStyle = isBoss ? '#9a3412' : '#f59e0b';
               targetCtx.beginPath();
               targetCtx.ellipse(-6, wingY, baseSize * 0.55, baseSize * 0.3, -0.15, 0, Math.PI * 2);
@@ -901,7 +923,6 @@ jobs:
                 homeCtx.restore();
               });
 
-              // Foreground Marsh Reeds
               homeCtx.fillStyle = curTheme.reeds;
               for (let r = 0; r < V_W; r += 16) {
                 const rH = 75 + Math.sin(r + frame * 0.04) * 18;
@@ -948,14 +969,13 @@ jobs:
               }
             }
 
-            // REALISTIC SHOCK + UPSIDE-DOWN SPIRAL FALLING DUCK
             class FallingDuck {
               constructor(x, y, z, dir, isBoss) {
                 this.x = x; this.y = y; this.z = z; this.dir = dir;
                 this.isBoss = isBoss;
                 this.baseSize = isBoss ? 68 : 52;
-                this.shockFrames = 10; // Freezes in shock first
-                this.vy = -4.5; // Pops up slightly when shot, then plummets
+                this.shockFrames = 10;
+                this.vy = -4.5;
                 this.vx = dir * 1.5;
                 this.rotation = 0;
                 this.wingFlap = 0;
@@ -968,8 +988,7 @@ jobs:
                 }
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.62; // Realistic gravity acceleration
-                // Flips upside down (PI) and rocks slightly
+                this.vy += 0.62;
                 if (this.rotation < Math.PI) {
                   this.rotation += 0.14;
                 } else {
@@ -977,7 +996,6 @@ jobs:
                 }
                 this.wingFlap += 0.65;
 
-                // Trigger Water Splash when hitting lake surface
                 if (!this.splashed && this.y >= V_H * 0.72) {
                   this.splashed = true;
                   playSound('splash');
@@ -1063,12 +1081,10 @@ jobs:
               }
             }
 
-            // CRISP FIRST-PERSON (FPS) WEAPON BARREL RENDERER
             function drawCrispFirstPersonGun(gunObj) {
               ctx.save();
               ctx.translate(V_W / 2, V_H - 35 + recoilY);
 
-              // Muzzle Flash on Shoot
               if (muzzleFlashFrame > 0) {
                 muzzleFlashFrame--;
                 ctx.fillStyle = gunObj.sound === 'plasma' ? '#38bdf8' : '#fde047';
@@ -1081,7 +1097,6 @@ jobs:
                 ctx.fill();
               }
 
-              // Weapon Stock / Body Base
               ctx.fillStyle = gunObj.accent;
               ctx.beginPath();
               ctx.roundRect(-34, -65, 68, 80, 12);
@@ -1090,7 +1105,6 @@ jobs:
               ctx.strokeStyle = '#0f172a';
               ctx.stroke();
 
-              // Main Dual or Single Barrel
               const bGrad = ctx.createLinearGradient(-22, 0, 22, 0);
               bGrad.addColorStop(0, '#0f172a');
               bGrad.addColorStop(0.5, gunObj.barrelColor);
@@ -1104,7 +1118,6 @@ jobs:
                 ctx.fillRect(-16, -155, 32, 100);
               }
 
-              // Iron Sight & Scope Rail
               ctx.fillStyle = '#e2e8f0';
               ctx.fillRect(-6, -145, 12, 55);
               ctx.fillStyle = '#ef4444';
@@ -1275,7 +1288,6 @@ jobs:
                 if (particles[i].alpha <= 0) particles.splice(i, 1);
               }
 
-              // Foreground Marsh Reeds
               ctx.fillStyle = curTheme.reeds;
               for (let r = 0; r < V_W; r += 18) {
                 const rH = 82 + Math.sin(r + frame * 0.05) * 20;
@@ -1329,7 +1341,6 @@ jobs:
               }
             }
 
-            // ARMORY WITH BOTH COIN BUY & AD UNLOCK OPTIONS
             function renderArmory() {
               const container = document.getElementById('hubListArmory');
               container.innerHTML = '';
@@ -1417,7 +1428,7 @@ jobs:
             };
             document.getElementById('btnEnterHub').onclick = () => {
               initAudio(); playTapSound();
-              selectedLevel = maxUnlockedLvl; // Auto-select highest unlocked stage
+              selectedLevel = maxUnlockedLvl;
               document.getElementById('homeScreen').style.display = 'none';
               document.getElementById('homeCanvasBg').style.display = 'none';
               setGameplayUiVisible(false);
