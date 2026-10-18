@@ -56,8 +56,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 4
-                versionName = "1.3.0"
+                versionCode = 5
+                versionName = "1.4.0"
                 multiDexEnabled = true
             }
 
@@ -84,16 +84,40 @@ jobs:
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-          <title>Duck Hunter 3D Ultimate Hunter</title>
+          <title>Duck Hunter 3D Ultimate</title>
           <style>
             * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-            html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0502; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
+            html, body { width: 100%; height: 100%; overflow: hidden; background: #080301; display: flex; align-items: center; justify-content: center; font-family: 'Trebuchet MS', sans-serif; }
             #phoneContainer { position: relative; width: 100vw; height: 100vh; max-width: 480px; aspect-ratio: 9/16; background: #081226; overflow: hidden; display: flex; flex-direction: column; }
             canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
             
-            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%); }
+            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; }
             
-            .cookie-board-window { background: #b07032; border: 8px solid #4a2110; outline: 5px solid #ffbe53; border-radius: 36px; padding: 22px 16px; position: relative; max-width: 92%; box-shadow: 0 12px 30px rgba(0,0,0,0.8); }
+            /* DYNAMIC VIDEO GAME HOME MENU STYLES */
+            #homeScreen { background: transparent; justify-content: space-between; padding: 35px 20px 25px 20px; }
+            #homeCanvasBg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+            
+            .home-top-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+            .home-stat-pill { background: rgba(20, 10, 4, 0.75); backdrop-filter: blur(8px); border: 2px solid #f59e0b; padding: 6px 14px; border-radius: 20px; color: #fef08a; font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 6px; }
+            .sound-toggle-btn { width: 38px; height: 38px; border-radius: 50%; background: rgba(20, 10, 4, 0.75); border: 2px solid #f59e0b; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+            
+            .logo-container { display: flex; flex-direction: column; align-items: center; margin-top: 15px; animation: floatLogo 3.2s ease-in-out infinite; z-index: 2; }
+            @keyframes floatLogo { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+            
+            .game-main-title { font-size: 38px; font-weight: 900; line-height: 1; letter-spacing: 1.5px; background: linear-gradient(180deg, #fffbeb 0%, #fde047 30%, #f59e0b 70%, #b45309 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.85)); text-transform: uppercase; }
+            .game-sub-title { font-size: 13px; font-weight: 900; color: #fed7aa; letter-spacing: 3px; background: rgba(0,0,0,0.65); padding: 3px 14px; border-radius: 12px; border: 1px solid #d97706; margin-top: 6px; text-shadow: 0 2px 4px #000; }
+
+            .home-center-hero { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 2; margin: 10px 0; }
+            .hero-badge-ring { width: 160px; height: 160px; border-radius: 50%; border: 4px dashed rgba(250, 204, 21, 0.5); display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, transparent 70%); animation: rotateRing 20s linear infinite; }
+            @keyframes rotateRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            .hero-duck-icon { position: absolute; font-size: 90px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8)); transform: scale(1.05); }
+
+            .home-bottom-actions { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2; }
+            
+            .play-pulse-btn { width: 85%; padding: 14px 0; font-size: 18px; font-weight: 900; letter-spacing: 1px; color: #173800; background: linear-gradient(180deg, #bef264 0%, #84cc16 45%, #4d7c0f 100%); border: 3.5px solid #ecfccb; border-radius: 36px; cursor: pointer; box-shadow: 0 7px 0 #1b4d00, 0 10px 24px rgba(132, 204, 22, 0.45); text-transform: uppercase; animation: pulseGlow 1.8s ease-in-out infinite; }
+            @keyframes pulseGlow { 0%, 100% { transform: scale(1); box-shadow: 0 7px 0 #1b4d00, 0 8px 18px rgba(132, 204, 22, 0.4); } 50% { transform: scale(1.03); box-shadow: 0 7px 0 #1b4d00, 0 14px 28px rgba(132, 204, 22, 0.7); } }
+            .play-pulse-btn:active { transform: translateY(4px) scale(0.98); box-shadow: 0 2px 0 #1b4d00; }
+
             .cookie-btn { background: linear-gradient(180deg, #ffc857 0%, #ff9800 45%, #d86900 100%); border: 3px solid #fff5c0; color: #542200; font-size: 14px; font-weight: 900; padding: 10px 18px; border-radius: 28px; cursor: pointer; box-shadow: 0 5px 0 #7b3200; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; }
             .cookie-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #7b3200; }
             .cookie-btn-green { background: linear-gradient(180deg, #9ae630 0%, #68bf08 45%, #3c8200 100%); border-color: #f1ffd6; color: #173800; box-shadow: 0 5px 0 #1b4d00; }
@@ -101,6 +125,7 @@ jobs:
             .cookie-btn-purple { background: linear-gradient(180deg, #d946ef 0%, #a855f7 45%, #7e22ce 100%); border-color: #fae8ff; color: #fff; box-shadow: 0 5px 0 #581c87; }
             .cookie-btn-red { background: linear-gradient(180deg, #ff6b6b 0%, #e82727 45%, #a50b0b 100%); border-color: #ffd8d8; color: #fff; box-shadow: 0 5px 0 #5b0505; }
             
+            .cookie-board-window { background: #b07032; border: 8px solid #4a2110; outline: 5px solid #ffbe53; border-radius: 36px; padding: 22px 16px; position: relative; max-width: 92%; box-shadow: 0 12px 30px rgba(0,0,0,0.8); }
             .ribbon-banner { background: linear-gradient(180deg, #ffdc33 0%, #f39c12 50%, #d35400 100%); border: 3px solid #fff2a3; border-radius: 18px; padding: 8px 30px; color: #fff; font-size: 22px; font-weight: 900; margin-top: -38px; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
             .ribbon-banner.lose { background: linear-gradient(180deg, #ff7675 0%, #d63031 50%, #7c0b0b 100%); border-color: #ffcccc; }
             
@@ -124,20 +149,38 @@ jobs:
         </head>
         <body>
           <div id="phoneContainer">
-            <!-- HOME SCREEN -->
+            <!-- CANVAS FOR HOME SCREEN PARALLAX ANIMATION -->
+            <canvas id="homeCanvasBg" width="720" height="1280"></canvas>
+
+            <!-- DYNAMIC VIDEO GAME HOME SCREEN -->
             <div id="homeScreen" class="screen">
-              <h1 style="font-size:30px; font-weight:900; color:#fff; margin-bottom:12px; background:linear-gradient(180deg, #ffdf79, #f39c12); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">DUCK HUNTER 3D</h1>
-              <div class="cookie-board-window" style="width:230px; margin-bottom:18px;">
-                <div style="font-size:75px; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));">🦆</div>
-                <div style="color:#fff3cc; font-size:12px; font-weight:900; letter-spacing:1px; margin-top:4px;">REAL WILD EXPEDITION</div>
+              <div class="home-top-bar">
+                <div class="home-stat-pill">🪙 <span id="homeCoinsDisplay">0</span></div>
+                <div style="display:flex; gap:8px;">
+                  <button id="btnSoundToggle" class="sound-toggle-btn" onclick="toggleAudioMute()">🔊</button>
+                  <div class="home-stat-pill" style="border-color:#38bdf8;">🎯 STAGE <span id="homeStageDisplay">1</span></div>
+                </div>
               </div>
-              <button id="btnEnterHub" class="cookie-btn" style="width:240px; font-size:16px;">▶ PLAY GAME</button>
-              <button id="btnWatchAd" onclick="requestRewardedAd('free_coins')" class="cookie-btn cookie-btn-green" style="width:240px; font-size:12px; margin-top:10px;">🎬 FREE 100 COINS</button>
-              <a href="https://youtube.com/@thegovindgupta?si=gXoJJdVou07U7r1m" target="_blank" style="color:#ff9999; text-decoration:none; font-weight:800; font-size:12px; margin-top:16px;">🔴 Channel: @thegovindgupta</a>
+
+              <div class="logo-container">
+                <div class="game-main-title">DUCK HUNTER 3D</div>
+                <div class="game-sub-title">WILD ARCADE EXPEDITION</div>
+              </div>
+
+              <div class="home-center-hero">
+                <div class="hero-badge-ring"></div>
+                <div class="hero-duck-icon">🦆</div>
+              </div>
+
+              <div class="home-bottom-actions">
+                <button id="btnEnterHub" class="play-pulse-btn">⚡ ENTER EXPEDITION</button>
+                <button id="btnWatchAd" onclick="requestRewardedAd('free_coins')" class="cookie-btn cookie-btn-green" style="width:85%; font-size:12px;">🎬 CLAIM 100 BONUS COINS</button>
+                <a href="https://youtube.com/@thegovindgupta?si=gXoJJdVou07U7r1m" target="_blank" style="color:#fecaca; text-decoration:none; font-weight:800; font-size:12px; text-shadow:0 2px 4px #000; margin-top:2px;">🔴 Channel: @thegovindgupta</a>
+              </div>
             </div>
 
-            <!-- HUB SCREEN -->
-            <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px;">
+            <!-- EXPEDITION HUB SCREEN -->
+            <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                 <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION HUB</h2>
                 <div style="background:rgba(20,8,3,0.9); border:2px solid #d97706; border-radius:24px; padding:4px 14px; color:#fef08a; font-weight:900;">🪙 <span id="hubCoins">0</span></div>
@@ -175,7 +218,7 @@ jobs:
             <canvas id="gameCanvas" width="720" height="1280"></canvas>
 
             <!-- WIN SCREEN -->
-            <div id="winScreen" class="screen" style="display:none;">
+            <div id="winScreen" class="screen" style="display:none; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner">VICTORY!</div>
                 <div style="font-size:36px; margin:6px 0;">⭐⭐⭐</div>
@@ -185,7 +228,7 @@ jobs:
             </div>
 
             <!-- GAME OVER SCREEN (WITH REVIVE REWARDED AD) -->
-            <div id="gameOverScreen" class="screen" style="display:none;">
+            <div id="gameOverScreen" class="screen" style="display:none; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div class="cookie-board-window" style="width:310px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner lose">HUNT FAILED!</div>
                 <div style="font-size:46px; margin:6px 0;">🦆💨</div>
@@ -201,6 +244,7 @@ jobs:
 
           <script>
             let audioCtx = null;
+            let isMuted = false;
             let currentAdRewardType = 'free_coins';
             let targetThemeIdToUnlock = 0;
 
@@ -212,7 +256,14 @@ jobs:
               if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             }
 
+            function toggleAudioMute() {
+              isMuted = !isMuted;
+              const btn = document.getElementById('btnSoundToggle');
+              if (btn) btn.innerText = isMuted ? '🔇' : '🔊';
+            }
+
             function playTapSound() {
+              if (isMuted) return;
               initAudio();
               if (!audioCtx) return;
               try {
@@ -230,6 +281,7 @@ jobs:
             }
 
             function playQuackSound(isBoss) {
+              if (isMuted) return;
               initAudio();
               if (!audioCtx) return;
               try {
@@ -248,6 +300,7 @@ jobs:
             }
 
             function playDeflectSound() {
+              if (isMuted) return;
               initAudio();
               if (!audioCtx) return;
               try {
@@ -265,6 +318,7 @@ jobs:
             }
 
             function playRealGunSound(gunType) {
+              if (isMuted) return;
               initAudio();
               if (!audioCtx) return;
               try {
@@ -304,6 +358,7 @@ jobs:
             }
 
             function playSound(type) {
+              if (isMuted) return;
               try {
                 initAudio();
                 if (!audioCtx) return;
@@ -368,40 +423,34 @@ jobs:
                   window.onRewardedAdReward();
                 }
               } catch (e) {
-                alert('Ad load nahi ho paaya, try again!');
+                alert('Ad load nahi ho paaya, kripya check karein!');
               }
             }
 
-            // AD REWARD HANDLER (COINS / THEMES / REVIVE)
             window.onRewardedAdReward = function() {
               if (currentAdRewardType === 'free_coins') {
-                coins += 100;
-                saveState();
-                playSound('win');
+                coins += 100; saveState(); playSound('win');
                 alert('🎉 100 Coins mil gaye!');
               } else if (currentAdRewardType === 'unlock_theme') {
                 if (!unlockedThemes.includes(targetThemeIdToUnlock)) {
                   unlockedThemes.push(targetThemeIdToUnlock);
                   activeTheme = targetThemeIdToUnlock;
-                  saveState();
-                  playSound('win');
+                  saveState(); playSound('win');
                   alert('🎨 Naya Theme Unlock ho gaya!');
                   renderThemes();
                 }
               } else if (currentAdRewardType === 'revive_life') {
-                lives = 3;
-                ammo = maxAmmo;
-                isReloading = false;
+                lives = 3; ammo = maxAmmo; isReloading = false;
                 document.getElementById('gameOverScreen').style.display = 'none';
-                updateHud();
-                isRunning = true;
-                playSound('win');
+                updateHud(); isRunning = true; playSound('win');
                 loop();
               }
             };
 
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
+            const homeCanvas = document.getElementById('homeCanvasBg');
+            const homeCtx = homeCanvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
             let coins = parseInt(localStorage.getItem('ds3d_coins') || '300');
@@ -444,12 +493,92 @@ jobs:
               localStorage.setItem('ds3d_max_lvl', maxUnlockedLvl);
               const el = document.getElementById('hubCoins');
               if (el) el.innerText = coins;
+              const hC = document.getElementById('homeCoinsDisplay');
+              if (hC) hC.innerText = coins;
+              const hS = document.getElementById('homeStageDisplay');
+              if (hS) hS.innerText = maxUnlockedLvl + 1;
             }
 
             let currentLvl = 0; let levelScore = 0; let lives = 3; 
             let maxAmmo = 15; let ammo = 15;
             let isReloading = false; let ducks = []; let fallingDucks = []; let particles = []; 
             let obstacles = []; let frame = 0; let isRunning = false; let recoilY = 0;
+
+            // DYNAMIC HOME SCREEN BACKGROUND ANIMATION (PARALLAX CLOUDS & FLYING DUCKS)
+            let homeDucks = [
+              { x: -50, y: 180, speed: 1.8, z: 0.65, wing: 0 },
+              { x: 300, y: 320, speed: 2.2, z: 0.8, wing: 1.5 }
+            ];
+            let homeClouds = [
+              { x: 40, y: 120, w: 180, h: 45, speed: 0.3 },
+              { x: 380, y: 220, w: 220, h: 55, speed: 0.45 },
+              { x: 620, y: 80, w: 140, h: 35, speed: 0.25 }
+            ];
+
+            function drawHomeDynamicBackground() {
+              homeCtx.clearRect(0, 0, V_W, V_H);
+              
+              // Sky gradient
+              const curTheme = THEMES[activeTheme] || THEMES[0];
+              const skyGrad = homeCtx.createLinearGradient(0, 0, 0, V_H * 0.7);
+              skyGrad.addColorStop(0, curTheme.skyTop);
+              skyGrad.addColorStop(1, curTheme.skyBottom);
+              homeCtx.fillStyle = skyGrad;
+              homeCtx.fillRect(0, 0, V_W, V_H * 0.7);
+
+              // Distant Sun
+              homeCtx.fillStyle = 'rgba(255, 237, 213, 0.35)';
+              homeCtx.beginPath(); homeCtx.arc(V_W * 0.75, 220, 65, 0, Math.PI * 2); homeCtx.fill();
+
+              // Moving Clouds
+              homeCtx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+              homeClouds.forEach(c => {
+                c.x += c.speed;
+                if (c.x > V_W + 100) c.x = -c.w - 50;
+                homeCtx.beginPath();
+                homeCtx.ellipse(c.x, c.y, c.w * 0.5, c.h * 0.5, 0, 0, Math.PI * 2);
+                homeCtx.fill();
+              });
+
+              // Ambient Ducks flying across menu
+              homeDucks.forEach(d => {
+                d.x += d.speed;
+                d.y += Math.sin(frame * 0.05) * 0.8;
+                d.wing += 0.25;
+                if (d.x > V_W + 90) { d.x = -90; d.y = 140 + Math.random() * 260; }
+                
+                homeCtx.save();
+                homeCtx.translate(d.x, d.y);
+                homeCtx.scale(d.z, d.z);
+                homeCtx.fillStyle = '#f59e0b';
+                homeCtx.beginPath(); homeCtx.ellipse(0, 0, 42, 26, 0, 0, Math.PI * 2); homeCtx.fill();
+                homeCtx.fillStyle = '#d97706';
+                homeCtx.beginPath(); homeCtx.ellipse(-8, Math.sin(d.wing) * 14, 22, 12, -0.2, 0, Math.PI * 2); homeCtx.fill();
+                homeCtx.fillStyle = '#047857';
+                homeCtx.beginPath(); homeCtx.arc(26, -14, 15, 0, Math.PI * 2); homeCtx.fill();
+                homeCtx.restore();
+              });
+
+              // Lake Water with Light Ripples
+              const waterGrad = homeCtx.createLinearGradient(0, V_H * 0.7, 0, V_H);
+              waterGrad.addColorStop(0, curTheme.waterTop);
+              waterGrad.addColorStop(1, curTheme.waterBottom);
+              homeCtx.fillStyle = waterGrad;
+              homeCtx.fillRect(0, V_H * 0.7, V_W, V_H * 0.3);
+
+              // Shimmer line
+              homeCtx.fillStyle = 'rgba(255,255,255,0.18)';
+              homeCtx.fillRect(0, V_H * 0.7, V_W, 3);
+
+              // Marsh Reeds in Silhouette
+              homeCtx.fillStyle = curTheme.reeds;
+              for (let r = 0; r < V_W; r += 16) {
+                const rH = 75 + Math.sin(r + frame * 0.04) * 18;
+                homeCtx.fillRect(r, V_H - rH, 6, rH);
+              }
+
+              if (!isRunning) requestAnimationFrame(drawHomeDynamicBackground);
+            }
 
             // DUCK CLASS (NORMAL & GIANT ARMORED BOSS)
             class Duck3D {
@@ -460,7 +589,6 @@ jobs:
                 this.baseSize = isBoss ? 75 : 55;
                 this.x = this.dir === 1 ? -120 : V_W + 120;
                 this.y = 180 + Math.random() * 400;
-                // Realistic moderate speed: Boss flies slower & steady
                 this.speed = (isBoss ? 1.4 : (2.1 + Math.random() * 0.5)) * (this.isBoss ? 1 : this.z);
                 this.vx = this.speed * this.dir;
                 this.vy = (Math.random() - 0.5) * (isBoss ? 0.8 : 1.4);
@@ -485,26 +613,21 @@ jobs:
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.z * (this.dir < 0 ? -1 : 1), this.z);
                 
-                // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
                 ctx.beginPath(); ctx.ellipse(0, this.baseSize * 0.7, this.baseSize * 0.65, 10, 0, 0, Math.PI * 2); ctx.fill();
                 
-                // Body
                 ctx.fillStyle = this.isBoss ? '#78350f' : '#f59e0b';
                 ctx.beginPath(); ctx.ellipse(0, 0, this.baseSize, this.baseSize * 0.62, 0, 0, Math.PI * 2); ctx.fill();
                 
-                // Animated Flapping Wings
                 const wingSpread = Math.sin(this.wingAngle) * (this.isBoss ? 28 : 22);
                 ctx.fillStyle = this.isBoss ? '#451a03' : '#d97706';
                 ctx.beginPath();
                 ctx.ellipse(-10, wingSpread, this.baseSize * 0.5, this.baseSize * 0.28, -0.2, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Head
                 ctx.fillStyle = this.isBoss ? '#14532d' : '#047857';
                 ctx.beginPath(); ctx.arc(this.baseSize * 0.6, -this.baseSize * 0.3, this.baseSize * 0.38, 0, Math.PI * 2); ctx.fill();
                 
-                // Beak
                 ctx.fillStyle = this.isBoss ? '#c2410c' : '#ea580c';
                 ctx.beginPath(); 
                 ctx.moveTo(this.baseSize * 0.85, -this.baseSize * 0.28); 
@@ -512,17 +635,14 @@ jobs:
                 ctx.lineTo(this.baseSize * 0.85, -0.06); 
                 ctx.fill();
                 
-                // Eye
                 ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(this.baseSize * 0.75, -this.baseSize * 0.38, 5, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(this.baseSize * 0.78, -this.baseSize * 0.38, 2.5, 0, Math.PI * 2); ctx.fill();
 
-                // Boss Crown / Armor & HP Bar
                 if (this.isBoss) {
                   ctx.fillStyle = '#facc15';
                   ctx.font = 'bold 20px sans-serif';
                   ctx.fillText('👑', -10, -this.baseSize * 0.6);
 
-                  // HP Bar
                   const barW = 70;
                   ctx.fillStyle = 'rgba(0,0,0,0.6)';
                   ctx.fillRect(-barW / 2, -this.baseSize * 0.85, barW, 8);
@@ -533,15 +653,9 @@ jobs:
               }
             }
 
-            // CREATIVE MOVING OBSTACLE (BAMBOO LOG / INDUSTRIAL PIPE)
             class ObstaclePipe {
               constructor(x, speed) {
-                this.x = x;
-                this.w = 54;
-                this.y = 120;
-                this.h = 420;
-                this.speed = speed;
-                this.dir = 1;
+                this.x = x; this.w = 54; this.y = 120; this.h = 420; this.speed = speed; this.dir = 1;
               }
               update() {
                 this.y += this.speed * this.dir;
@@ -553,7 +667,6 @@ jobs:
                 pipeGrad.addColorStop(0, '#334155'); pipeGrad.addColorStop(0.5, '#64748b'); pipeGrad.addColorStop(1, '#1e293b');
                 ctx.fillStyle = pipeGrad;
                 ctx.fillRect(this.x, this.y, this.w, this.h);
-                // Metal bolts
                 ctx.fillStyle = '#94a3b8';
                 ctx.beginPath(); ctx.arc(this.x + 10, this.y + 20, 4, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(this.x + this.w - 10, this.y + 20, 4, 0, Math.PI * 2); ctx.fill();
@@ -570,14 +683,11 @@ jobs:
                 this.isBoss = isBoss;
               }
               update() {
-                this.y += this.vy;
-                this.vy += 0.48; // Gravity
-                this.rotation += this.spinSpeed;
+                this.y += this.vy; this.vy += 0.48; this.rotation += this.spinSpeed;
               }
               draw() {
                 ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.rotation);
+                ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
                 ctx.scale(this.z * (this.dir < 0 ? -1 : 1), this.z);
                 ctx.fillStyle = this.isBoss ? '#451a03' : '#b45309';
                 ctx.beginPath(); ctx.ellipse(0, 0, 48, 28, 0, 0, Math.PI * 2); ctx.fill();
@@ -619,6 +729,8 @@ jobs:
               document.getElementById('uiLives').innerText = '❤'.repeat(Math.max(0, lives));
               document.getElementById('uiAmmo').innerText = isReloading ? 'RELOAD...' : `${ammo}/${maxAmmo}`;
               document.getElementById('hubCoins').innerText = coins;
+              document.getElementById('homeCoinsDisplay').innerText = coins;
+              document.getElementById('homeStageDisplay').innerText = maxUnlockedLvl + 1;
             }
 
             function startMission(lvlIndex) {
@@ -629,11 +741,11 @@ jobs:
               frame = 0; isRunning = true; recoilY = 0;
 
               const cfg = getLevelConfig(currentLvl);
-              // Setup Creative Obstacles based on Level
               if (cfg.obstacleCount >= 1) obstacles.push(new ObstaclePipe(V_W * 0.32, 1.2));
               if (cfg.obstacleCount >= 2) obstacles.push(new ObstaclePipe(V_W * 0.65, 1.6));
 
               document.getElementById('homeScreen').style.display = 'none';
+              document.getElementById('homeCanvasBg').style.display = 'none';
               document.getElementById('hubScreen').style.display = 'none';
               document.getElementById('winScreen').style.display = 'none';
               document.getElementById('gameOverScreen').style.display = 'none';
@@ -673,7 +785,6 @@ jobs:
               const gunObj = REAL_GUNS[equippedGun];
               playRealGunSound(gunObj.sound || 'pistol');
 
-              // Check if bullet hit an Obstacle Pipe (Deflection)
               let hitObstacle = false;
               for (let obs of obstacles) {
                 if (tx >= obs.x && tx <= obs.x + obs.w && ty >= obs.y && ty <= obs.y + obs.h) {
@@ -701,7 +812,7 @@ jobs:
                       ducks.splice(i, 1);
                     } else {
                       playSound('hit');
-                      d.vx *= 1.15; // boss accelerates slightly on hit
+                      d.vx *= 1.15;
                     }
                     break;
                   }
@@ -723,29 +834,24 @@ jobs:
 
               ctx.clearRect(0, 0, V_W, V_H);
               
-              // DYNAMIC REALISTIC HUNTING SCENERY
               const curTheme = THEMES[activeTheme] || THEMES[0];
               const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H * 0.65);
               skyGrad.addColorStop(0, curTheme.skyTop); skyGrad.addColorStop(1, curTheme.skyBottom);
               ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, V_W, V_H * 0.65);
 
-              // Distant Sun / Mist
               ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
               ctx.beginPath(); ctx.arc(V_W * 0.78, 170, 50, 0, Math.PI * 2); ctx.fill();
 
-              // Water Body
               const waterGrad = ctx.createLinearGradient(0, V_H * 0.65, 0, V_H);
               waterGrad.addColorStop(0, curTheme.waterTop); waterGrad.addColorStop(1, curTheme.waterBottom);
               ctx.fillStyle = waterGrad; ctx.fillRect(0, V_H * 0.65, V_W, V_H * 0.35);
 
-              // Spawn Regular Ducks or Boss
               const cfg = getLevelConfig(currentLvl);
               if (frame % cfg.spawnInterval === 0 && ducks.length < 5) {
                 const spawnBoss = cfg.hasBoss && !ducks.some(d => d.isBoss) && Math.random() > 0.4;
                 ducks.push(new Duck3D(cfg, spawnBoss));
               }
 
-              // Update & Draw Ducks
               for (let i = ducks.length - 1; i >= 0; i--) {
                 const d = ducks[i]; d.update(); d.draw();
                 if ((d.dir === 1 && d.x > V_W + 130) || (d.dir === -1 && d.x < -130)) {
@@ -756,31 +862,22 @@ jobs:
                 }
               }
 
-              // Update & Draw Obstacles (Pipes block bullets & ducks)
-              for (let obs of obstacles) {
-                obs.update(); obs.draw();
-              }
-
-              // Falling Ducks
+              for (let obs of obstacles) { obs.update(); obs.draw(); }
               for (let i = fallingDucks.length - 1; i >= 0; i--) {
                 const fd = fallingDucks[i]; fd.update(); fd.draw();
                 if (fd.y > V_H + 90) fallingDucks.splice(i, 1);
               }
-
-              // Particles
               for (let i = particles.length - 1; i >= 0; i--) {
                 particles[i].update(); particles[i].draw();
                 if (particles[i].alpha <= 0) particles.splice(i, 1);
               }
 
-              // Realistic Marsh Reeds (Foreground Hunter Blind)
               ctx.fillStyle = curTheme.reeds;
               for (let r = 0; r < V_W; r += 18) {
                 const rH = 80 + Math.sin(r + frame * 0.05) * 20;
                 ctx.fillRect(r, V_H - rH, 7, rH);
               }
 
-              // Render Gun at Bottom Center
               const gunImg = gunSprites[equippedGun];
               if (gunImg && gunImg.complete) {
                 ctx.save();
@@ -915,11 +1012,14 @@ jobs:
             document.getElementById('btnEnterHub').onclick = () => {
               initAudio(); playTapSound();
               document.getElementById('homeScreen').style.display = 'none';
+              document.getElementById('homeCanvasBg').style.display = 'none';
               document.getElementById('hubScreen').style.display = 'flex'; switchHub('levels');
             };
             document.getElementById('btnBackToHome').onclick = () => {
               playTapSound(); document.getElementById('hubScreen').style.display = 'none';
               document.getElementById('homeScreen').style.display = 'flex';
+              document.getElementById('homeCanvasBg').style.display = 'block';
+              drawHomeDynamicBackground();
             };
             document.getElementById('btnStartMission').onclick = () => startMission(selectedLevel);
             document.getElementById('btnNextLevel').onclick = () => startMission(currentLvl + 1);
@@ -934,6 +1034,7 @@ jobs:
             };
 
             saveState();
+            drawHomeDynamicBackground();
           </script>
         </body>
         </html>
