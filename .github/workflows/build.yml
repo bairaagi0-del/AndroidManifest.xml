@@ -25,9 +25,154 @@ jobs:
         flutter-version: '3.22.x'
         channel: 'stable'
 
+    - name: Write Clean pubspec.yaml
+      run: |
+        cat << 'EOF' > pubspec.yaml
+        name: duckshooter3d
+        description: Duck Hunter 3D Ultimate Expedition
+        publish_to: 'none'
+        version: 1.5.0+6
+
+        environment:
+          sdk: '>=3.0.0 <4.0.0'
+
+        dependencies:
+          flutter:
+            sdk: flutter
+          webview_flutter: ^4.8.0
+          google_mobile_ads: ^5.1.0
+
+        flutter:
+          uses-material-design: true
+          assets:
+            - assets/index.html
+        EOF
+
     - name: Recreate Android Project Structure
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter3d
+
+    - name: Write Clean lib/main.dart with Cache Clear & AdMob
+      run: |
+        mkdir -p lib
+        cat << 'EOF' > lib/main.dart
+        import 'package:flutter/material.dart';
+        import 'package:flutter/services.dart';
+        import 'package:webview_flutter/webview_flutter.dart';
+        import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+        void main() {
+          WidgetsFlutterBinding.ensureInitialized();
+          MobileAds.instance.initialize();
+          SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]);
+          runApp(const MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: DuckShooterGame(),
+          ));
+        }
+
+        class DuckShooterGame extends StatefulWidget {
+          const DuckShooterGame({super.key});
+
+          @override
+          State<DuckShooterGame> createState() => _DuckShooterGameState();
+        }
+
+        class _DuckShooterGameState extends State<DuckShooterGame> {
+          late final WebViewController _controller;
+          RewardedAd? _rewardedAd;
+          InterstitialAd? _interstitialAd;
+
+          @override
+          void initState() {
+            super.initState();
+            _loadInterstitialAd();
+            _loadRewardedAd();
+
+            _controller = WebViewController()
+              ..setJavaScriptMode(JavaScriptMode.unrestricted)
+              ..setBackgroundColor(const Color(0xFF080301))
+              ..addJavaScriptChannel(
+                'AdMobBridge',
+                onMessageReceived: (JavaScriptMessage message) {
+                  if (message.message == 'showInterstitial') {
+                    _showInterstitialAd();
+                  } else if (message.message == 'showRewarded') {
+                    _showRewardedAd();
+                  }
+                },
+              );
+
+            _initCleanWebView();
+          }
+
+          Future<void> _initCleanWebView() async {
+            await _controller.clearCache();
+            await _controller.clearLocalStorage();
+            await _controller.loadFlutterAsset('assets/index.html');
+          }
+
+          void _loadInterstitialAd() {
+            InterstitialAd.load(
+              adUnitId: 'ca-app-pub-1590363558146928/8937070118',
+              request: const AdRequest(),
+              adLoadCallback: InterstitialAdLoadCallback(
+                onAdLoaded: (ad) => _interstitialAd = ad,
+                onAdFailedToLoad: (error) => _interstitialAd = null,
+              ),
+            );
+          }
+
+          void _showInterstitialAd() {
+            if (_interstitialAd != null) {
+              _interstitialAd!.show();
+              _interstitialAd = null;
+              _loadInterstitialAd();
+            } else {
+              _loadInterstitialAd();
+            }
+          }
+
+          void _loadRewardedAd() {
+            RewardedAd.load(
+              adUnitId: 'ca-app-pub-1590363558146928/6265005825',
+              request: const AdRequest(),
+              rewardedAdLoadCallback: RewardedAdLoadCallback(
+                onAdLoaded: (ad) => _rewardedAd = ad,
+                onAdFailedToLoad: (error) => _rewardedAd = null,
+              ),
+            );
+          }
+
+          void _showRewardedAd() {
+            if (_rewardedAd != null) {
+              _rewardedAd!.show(
+                onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+                  _controller.runJavaScript('window.onRewardedAdReward();');
+                },
+              );
+              _rewardedAd = null;
+              _loadRewardedAd();
+            } else {
+              _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
+              _loadRewardedAd();
+            }
+          }
+
+          @override
+          Widget build(BuildContext context) {
+            return Scaffold(
+              backgroundColor: const Color(0xFF080301),
+              body: SafeArea(
+                child: WebViewWidget(controller: _controller),
+              ),
+            );
+          }
+        }
+        EOF
 
     - name: Configure Hardcoded SDK and Gradle
       run: |
@@ -56,8 +201,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 5
-                versionName = "1.4.0"
+                versionCode = 6
+                versionName = "1.5.0"
                 multiDexEnabled = true
             }
 
@@ -93,7 +238,6 @@ jobs:
             
             .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; }
             
-            /* DYNAMIC VIDEO GAME HOME MENU STYLES */
             #homeScreen { background: transparent; justify-content: space-between; padding: 35px 20px 25px 20px; }
             #homeCanvasBg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
             
@@ -149,10 +293,8 @@ jobs:
         </head>
         <body>
           <div id="phoneContainer">
-            <!-- CANVAS FOR HOME SCREEN PARALLAX ANIMATION -->
             <canvas id="homeCanvasBg" width="720" height="1280"></canvas>
 
-            <!-- DYNAMIC VIDEO GAME HOME SCREEN -->
             <div id="homeScreen" class="screen">
               <div class="home-top-bar">
                 <div class="home-stat-pill">🪙 <span id="homeCoinsDisplay">0</span></div>
@@ -179,7 +321,6 @@ jobs:
               </div>
             </div>
 
-            <!-- EXPEDITION HUB SCREEN -->
             <div id="hubScreen" class="screen" style="display:none; justify-content: flex-start; padding-top: 14px; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                 <h2 style="color:#ffdf79; font-size:16px; font-weight:900;">EXPEDITION HUB</h2>
@@ -202,7 +343,6 @@ jobs:
               </div>
             </div>
 
-            <!-- GAMEPLAY HUD -->
             <div class="gameplay-hud">
               <button id="btnAbortExit" class="cookie-btn cookie-btn-red" style="pointer-events:auto; padding:5px 12px; font-size:11px;">✖ EXIT</button>
               <div class="hud-cookie-pill"><small>STAGE</small><strong id="uiLvl">1/100</strong></div>
@@ -217,7 +357,6 @@ jobs:
 
             <canvas id="gameCanvas" width="720" height="1280"></canvas>
 
-            <!-- WIN SCREEN -->
             <div id="winScreen" class="screen" style="display:none; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div class="cookie-board-window" style="width:300px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner">VICTORY!</div>
@@ -227,7 +366,6 @@ jobs:
               </div>
             </div>
 
-            <!-- GAME OVER SCREEN (WITH REVIVE REWARDED AD) -->
             <div id="gameOverScreen" class="screen" style="display:none; background: radial-gradient(circle at 50% 30%, #452614 0%, #1e0d04 75%, #080301 100%);">
               <div class="cookie-board-window" style="width:310px; display:flex; flex-direction:column; align-items:center;">
                 <div class="ribbon-banner lose">HUNT FAILED!</div>
@@ -419,13 +557,14 @@ jobs:
                 if (window.AdMobBridge) {
                   window.AdMobBridge.postMessage('showRewarded');
                 } else {
-                  alert('Test Mode: Ad reward successful!');
                   window.onRewardedAdReward();
                 }
-              } catch (e) {
-                alert('Ad load nahi ho paaya, kripya check karein!');
-              }
+              } catch (e) {}
             }
+
+            window.onAdLoadFailed = function() {
+              alert('Ad load ho raha hai, kripya 3-4 second baad dobara tap karein!');
+            };
 
             window.onRewardedAdReward = function() {
               if (currentAdRewardType === 'free_coins') {
@@ -504,7 +643,6 @@ jobs:
             let isReloading = false; let ducks = []; let fallingDucks = []; let particles = []; 
             let obstacles = []; let frame = 0; let isRunning = false; let recoilY = 0;
 
-            // DYNAMIC HOME SCREEN BACKGROUND ANIMATION (PARALLAX CLOUDS & FLYING DUCKS)
             let homeDucks = [
               { x: -50, y: 180, speed: 1.8, z: 0.65, wing: 0 },
               { x: 300, y: 320, speed: 2.2, z: 0.8, wing: 1.5 }
@@ -517,8 +655,6 @@ jobs:
 
             function drawHomeDynamicBackground() {
               homeCtx.clearRect(0, 0, V_W, V_H);
-              
-              // Sky gradient
               const curTheme = THEMES[activeTheme] || THEMES[0];
               const skyGrad = homeCtx.createLinearGradient(0, 0, 0, V_H * 0.7);
               skyGrad.addColorStop(0, curTheme.skyTop);
@@ -526,11 +662,9 @@ jobs:
               homeCtx.fillStyle = skyGrad;
               homeCtx.fillRect(0, 0, V_W, V_H * 0.7);
 
-              // Distant Sun
               homeCtx.fillStyle = 'rgba(255, 237, 213, 0.35)';
               homeCtx.beginPath(); homeCtx.arc(V_W * 0.75, 220, 65, 0, Math.PI * 2); homeCtx.fill();
 
-              // Moving Clouds
               homeCtx.fillStyle = 'rgba(255, 255, 255, 0.22)';
               homeClouds.forEach(c => {
                 c.x += c.speed;
@@ -540,7 +674,6 @@ jobs:
                 homeCtx.fill();
               });
 
-              // Ambient Ducks flying across menu
               homeDucks.forEach(d => {
                 d.x += d.speed;
                 d.y += Math.sin(frame * 0.05) * 0.8;
@@ -559,18 +692,15 @@ jobs:
                 homeCtx.restore();
               });
 
-              // Lake Water with Light Ripples
               const waterGrad = homeCtx.createLinearGradient(0, V_H * 0.7, 0, V_H);
               waterGrad.addColorStop(0, curTheme.waterTop);
               waterGrad.addColorStop(1, curTheme.waterBottom);
               homeCtx.fillStyle = waterGrad;
               homeCtx.fillRect(0, V_H * 0.7, V_W, V_H * 0.3);
 
-              // Shimmer line
               homeCtx.fillStyle = 'rgba(255,255,255,0.18)';
               homeCtx.fillRect(0, V_H * 0.7, V_W, 3);
 
-              // Marsh Reeds in Silhouette
               homeCtx.fillStyle = curTheme.reeds;
               for (let r = 0; r < V_W; r += 16) {
                 const rH = 75 + Math.sin(r + frame * 0.04) * 18;
@@ -580,7 +710,6 @@ jobs:
               if (!isRunning) requestAnimationFrame(drawHomeDynamicBackground);
             }
 
-            // DUCK CLASS (NORMAL & GIANT ARMORED BOSS)
             class Duck3D {
               constructor(lvlCfg, isBoss = false) {
                 this.isBoss = isBoss;
