@@ -31,7 +31,7 @@ jobs:
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.9.1+11
+        version: 1.9.2+12
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -52,7 +52,7 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter3d
 
-    - name: Write Clean lib/main.dart (100% Pure Real Ads Only)
+    - name: Write Clean lib/main.dart (Pure Real AdMob Integration)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -62,9 +62,9 @@ jobs:
         import 'package:webview_flutter/webview_flutter.dart';
         import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-        void main() {
+        void main() async {
           WidgetsFlutterBinding.ensureInitialized();
-          MobileAds.instance.initialize();
+          await MobileAds.instance.initialize();
           SystemChrome.setPreferredOrientations([
             DeviceOrientation.portraitUp,
             DeviceOrientation.portraitDown,
@@ -88,10 +88,9 @@ jobs:
           bool _isBannerReady = false;
           RewardedAd? _rewardedAd;
           InterstitialAd? _interstitialAd;
-          bool _isLoadingRewarded = false;
-          bool _waitingToShowRewarded = false;
+          bool _isRewardedLoading = false;
 
-          // 100% REAL ADMOB UNIT IDS ONLY
+          // YOUR 100% REAL ADMOB UNIT IDS
           final String _realBannerId = 'ca-app-pub-1590363558146928/9825341835';
           final String _realInterstitialId = 'ca-app-pub-1590363558146928/8937070118';
           final String _realRewardedId = 'ca-app-pub-1590363558146928/6265005825';
@@ -138,8 +137,11 @@ jobs:
                 },
                 onAdFailedToLoad: (ad, err) {
                   ad.dispose();
-                  _isBannerReady = false;
-                  Future.delayed(const Duration(seconds: 15), _loadBannerAd);
+                  setState(() {
+                    _isBannerReady = false;
+                  });
+                  // Retry banner load after 10 seconds
+                  Future.delayed(const Duration(seconds: 10), _loadBannerAd);
                 },
               ),
             )..load();
@@ -155,7 +157,7 @@ jobs:
                 },
                 onAdFailedToLoad: (error) {
                   _interstitialAd = null;
-                  Future.delayed(const Duration(seconds: 15), _loadInterstitialAd);
+                  Future.delayed(const Duration(seconds: 10), _loadInterstitialAd);
                 },
               ),
             );
@@ -183,8 +185,8 @@ jobs:
           }
 
           void _loadRewardedAd() {
-            if (_isLoadingRewarded || _rewardedAd != null) return;
-            _isLoadingRewarded = true;
+            if (_isRewardedLoading || _rewardedAd != null) return;
+            _isRewardedLoading = true;
 
             RewardedAd.load(
               adUnitId: _realRewardedId,
@@ -192,21 +194,13 @@ jobs:
               rewardedAdLoadCallback: RewardedAdLoadCallback(
                 onAdLoaded: (ad) {
                   _rewardedAd = ad;
-                  _isLoadingRewarded = false;
-                  if (_waitingToShowRewarded) {
-                    _waitingToShowRewarded = false;
-                    _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
-                    _showRewardedAd();
-                  }
+                  _isRewardedLoading = false;
                 },
                 onAdFailedToLoad: (error) {
                   _rewardedAd = null;
-                  _isLoadingRewarded = false;
-                  if (_waitingToShowRewarded) {
-                    _waitingToShowRewarded = false;
-                    _controller.runJavaScript('if(window.onAdLoadFailed) window.onAdLoadFailed();');
-                  }
-                  Future.delayed(const Duration(seconds: 10), _loadRewardedAd);
+                  _isRewardedLoading = false;
+                  // Retry rewarded load after 8 seconds
+                  Future.delayed(const Duration(seconds: 8), _loadRewardedAd);
                 },
               ),
             );
@@ -214,9 +208,6 @@ jobs:
 
           void _showRewardedAd() {
             if (_rewardedAd != null) {
-              _waitingToShowRewarded = false;
-              _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
-
               _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
                 onAdDismissedFullScreenContent: (ad) {
                   ad.dispose();
@@ -237,9 +228,24 @@ jobs:
               );
               _rewardedAd = null;
             } else {
-              _waitingToShowRewarded = true;
+              // If ad is not ready yet, trigger loading UI and try loading immediately
               _controller.runJavaScript('if(window.showAdLoadingOverlay) window.showAdLoadingOverlay();');
               _loadRewardedAd();
+              
+              // Wait up to 4 seconds for it to become ready
+              int attempts = 0;
+              Timer.periodic(const Duration(milliseconds: 800), (timer) {
+                attempts++;
+                if (_rewardedAd != null) {
+                  timer.cancel();
+                  _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
+                  _showRewardedAd();
+                } else if (attempts >= 5) {
+                  timer.cancel();
+                  _controller.runJavaScript('if(window.hideAdLoadingOverlay) window.hideAdLoadingOverlay();');
+                  _controller.runJavaScript("alert('Ad abhi load ho raha hai. Kripya 2 second baad dobara tap karein!');");
+                }
+              });
             }
           }
 
@@ -303,8 +309,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 11
-                versionName = "1.9.1"
+                versionCode = 12
+                versionName = "1.9.2"
                 multiDexEnabled = true
             }
 
@@ -401,7 +407,7 @@ jobs:
           <div id="phoneContainer">
             <div id="adLoadingModal">
               <div style="font-size:44px; margin-bottom:10px;">🎬</div>
-              <div style="font-size:16px;">LOADING VIDEO AD...</div>
+              <div style="font-size:16px;">CONNECTING TO ADMOB...</div>
               <div style="font-size:11px; color:#cbd5e1; margin-top:6px;">Please wait a moment</div>
             </div>
 
@@ -704,7 +710,7 @@ jobs:
 
             window.onAdLoadFailed = function() {
               window.hideAdLoadingOverlay();
-              alert('Ad load nahi ho paaya. Kripya internet connection check karein!');
+              alert('Ad load hone me samay lag raha hai. Kripya apna internet connection check karein!');
             };
 
             window.onRewardedAdReward = function() {
