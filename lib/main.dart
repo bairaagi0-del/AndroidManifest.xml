@@ -1,225 +1,104 @@
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await MobileAds.instance.initialize();
-  runApp(const DuckShooterApp());
+  MobileAds.instance.initialize();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: DuckShooterGame(),
+  ));
 }
 
-class DuckShooterApp extends StatelessWidget {
-  const DuckShooterApp({super.key});
+class DuckShooterGame extends StatefulWidget {
+  const DuckShooterGame({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Duck Shooter 2',
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFF0C0502),
-      ),
-      home: const DuckGameScreen(),
-    );
-  }
+  State<DuckShooterGame> createState() => _DuckShooterGameState();
 }
 
-class DuckGameScreen extends StatefulWidget {
-  const DuckGameScreen({super.key});
-
-  @override
-  State<DuckGameScreen> createState() => _DuckGameScreenState();
-}
-
-class _DuckGameScreenState extends State<DuckGameScreen> {
-  final String bannerAdUnitId = 'ca-app-pub-1590363558146928/9630631281';
-  final String interstitialAdUnitId = 'ca-app-pub-1590363558146928/7196039630';
-  final String rewardedAdUnitId = 'ca-app-pub-1590363558146928/2274885449';
-
-  late final WebViewController _webController;
-  BannerAd? _bannerAd;
-  bool _isBannerLoaded = false;
-  InterstitialAd? _interstitialAd;
+class _DuckShooterGameState extends State<DuckShooterGame> {
+  late final WebViewController _controller;
   RewardedAd? _rewardedAd;
-  bool _isLoadingRewarded = false;
-  bool _waitingForRewardedAd = false;
+  InterstitialAd? _interstitialAd;
 
   @override
   void initState() {
     super.initState();
-    _initBanner();
-    _loadInterstitial();
-    _loadRewarded();
-    _setupWebView();
-  }
+    _loadInterstitialAd();
+    _loadRewardedAd();
 
-  void _initBanner() {
-    _bannerAd = BannerAd(
-      adUnitId: bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (_) => setState(() => _isBannerLoaded = true),
-        onAdFailedToLoad: (ad, err) => ad.dispose(),
-      ),
-    )..load();
-  }
-
-  void _loadInterstitial() {
-    InterstitialAd.load(
-      adUnitId: interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) => _interstitialAd = ad,
-        onAdFailedToLoad: (err) => _interstitialAd = null,
-      ),
-    );
-  }
-
-  void _showInterstitial() {
-    if (_interstitialAd != null) {
-      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _loadInterstitial();
-        },
-        onAdFailedToShowFullScreenContent: (ad, err) {
-          ad.dispose();
-          _loadInterstitial();
-        },
-      );
-      _interstitialAd!.show();
-      _interstitialAd = null;
-    } else {
-      _loadInterstitial();
-    }
-  }
-
-  void _loadRewarded() {
-    if (_isLoadingRewarded || _rewardedAd != null) return;
-    _isLoadingRewarded = true;
-    RewardedAd.load(
-      adUnitId: rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAd = ad;
-          _isLoadingRewarded = false;
-          if (_waitingForRewardedAd) {
-            _waitingForRewardedAd = false;
-            _showRewarded();
-          }
-        },
-        onAdFailedToLoad: (err) {
-          _rewardedAd = null;
-          _isLoadingRewarded = false;
-          if (_waitingForRewardedAd) {
-            _waitingForRewardedAd = false;
-            _webController.runJavaScript('window.onAdLoadFailed();');
-          }
-          Future.delayed(const Duration(seconds: 8), () {
-            if (mounted) _loadRewarded();
-          });
-        },
-      ),
-    );
-  }
-
-  void _showRewarded() {
-    if (_rewardedAd != null) {
-      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _rewardedAd = null;
-          _loadRewarded();
-        },
-        onAdFailedToShowFullScreenContent: (ad, err) {
-          ad.dispose();
-          _rewardedAd = null;
-          _loadRewarded();
-        },
-      );
-      _rewardedAd!.show(
-        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-          _webController.runJavaScript('window.onRewardedAdReward();');
-        },
-      );
-      _rewardedAd = null;
-    } else {
-      _waitingForRewardedAd = true;
-      _loadRewarded();
-    }
-  }
-
-  void _setupWebView() {
-    _webController = WebViewController()
+    _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..clearCache() // FORCE CACHE CLEAR
+      ..clearLocalStorage()
       ..setBackgroundColor(const Color(0xFF0C0502))
       ..addJavaScriptChannel(
         'AdMobBridge',
         onMessageReceived: (JavaScriptMessage message) {
           if (message.message == 'showInterstitial') {
-            _showInterstitial();
+            _showInterstitialAd();
           } else if (message.message == 'showRewarded') {
-            _showRewarded();
+            _showRewardedAd();
           }
         },
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) async {
-            final url = request.url;
-            if (url.contains('youtube.com') ||
-                url.contains('youtu.be') ||
-                url.startsWith('intent://')) {
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
       )
       ..loadFlutterAsset('assets/index.html');
   }
 
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    _interstitialAd?.dispose();
-    _rewardedAd?.dispose();
-    super.dispose();
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: 'ca-app-pub-1590363558146928/8937070118',
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) => _interstitialAd = ad,
+        onAdFailedToLoad: (error) => _interstitialAd = null,
+      ),
+    );
+  }
+
+  void _showInterstitialAd() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.show();
+      _loadInterstitialAd();
+    }
+  }
+
+  void _loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: 'ca-app-pub-1590363558146928/6265005825',
+      request: const AdRequest(),
+      adLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) => _rewardedAd = ad,
+        onAdFailedToLoad: (error) => _rewardedAd = null,
+      ),
+    );
+  }
+
+  void _showRewardedAd() {
+    if (_rewardedAd != null) {
+      _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
+        _controller.runJavaScript('window.onRewardedAdReward();');
+      });
+      _loadRewardedAd();
+    } else {
+      _controller.runJavaScript('window.onAdLoadFailed();');
+      _loadRewardedAd();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (await _webController.canGoBack()) {
-          _webController.goBack();
-          return false;
-        }
-        return true;
-      },
-      child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: WebViewWidget(controller: _webController),
-              ),
-              if (_isBannerLoaded && _bannerAd != null)
-                SizedBox(
-                  width: _bannerAd!.size.width.toDouble(),
-                  height: _bannerAd!.size.height.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
-            ],
-          ),
-        ),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0C0502),
+      body: SafeArea(
+        child: WebViewWidget(controller: _controller),
       ),
     );
   }
