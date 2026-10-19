@@ -31,7 +31,7 @@ jobs:
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.9.5+15
+        version: 1.9.7+17
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -58,7 +58,6 @@ jobs:
         echo "android.enableJetifier=true" >> android/gradle.properties
         echo "org.gradle.jvmargs=-Xmx4G -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
         
-        # Ensure correct gradle wrapper version
         mkdir -p android/gradle/wrapper
         cat << 'EOF' > android/gradle/wrapper/gradle-wrapper.properties
         distributionBase=GRADLE_USER_HOME
@@ -70,7 +69,7 @@ jobs:
         zipStorePath=gradle/wrapper
         EOF
 
-    - name: Write Clean lib/main.dart
+    - name: Write Clean lib/main.dart (With New Ad Unit IDs)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -108,9 +107,10 @@ jobs:
           InterstitialAd? _interstitialAd;
           bool _isRewardedLoading = false;
 
-          final String _realBannerId = 'ca-app-pub-1590363558146928/9825341835';
-          final String _realInterstitialId = 'ca-app-pub-1590363558146928/8937070118';
-          final String _realRewardedId = 'ca-app-pub-1590363558146928/6265005825';
+          // NEW AD UNIT IDS FROM SCREENSHOT
+          final String _realBannerId = 'ca-app-pub-1590363558146928/6504994243';
+          final String _realInterstitialId = 'ca-app-pub-1590363558146928/1995078608';
+          final String _realRewardedId = 'ca-app-pub-1590363558146928/6648639480';
 
           @override
           void initState() {
@@ -283,7 +283,7 @@ jobs:
         }
         EOF
 
-    - name: Configure Hardcoded SDK and Gradle
+    - name: Configure Hardcoded SDK and Gradle (API 34)
       run: |
         cat << 'EOF' > android/app/build.gradle
         plugins {
@@ -310,8 +310,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 15
-                versionName = "1.9.5"
+                versionCode = 17
+                versionName = "1.9.7"
                 multiDexEnabled = true
             }
 
