@@ -25,13 +25,20 @@ jobs:
         flutter-version: '3.22.x'
         channel: 'stable'
 
+    - name: Ensure Assets Folder & index.html Exist
+      run: |
+        mkdir -p assets
+        if [ ! -f "assets/index.html" ]; then
+          echo "<!DOCTYPE html><html><head><title>Duck Shooter</title></head><body>Loading...</body></html>" > assets/index.html
+        fi
+
     - name: Write Clean pubspec.yaml
       run: |
         cat << 'EOF' > pubspec.yaml
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.9.7+17
+        version: 1.9.9+19
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -69,7 +76,7 @@ jobs:
         zipStorePath=gradle/wrapper
         EOF
 
-    - name: Write Clean lib/main.dart (With New Ad Unit IDs)
+    - name: Write Clean lib/main.dart (Duck Shooter 2 Working Ad IDs)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -107,10 +114,9 @@ jobs:
           InterstitialAd? _interstitialAd;
           bool _isRewardedLoading = false;
 
-          // NEW AD UNIT IDS FROM SCREENSHOT
-          final String _realBannerId = 'ca-app-pub-1590363558146928/6504994243';
-          final String _realInterstitialId = 'ca-app-pub-1590363558146928/1995078608';
-          final String _realRewardedId = 'ca-app-pub-1590363558146928/6648639480';
+          final String _realBannerId = 'ca-app-pub-1590363558146928/9630631281';
+          final String _realInterstitialId = 'ca-app-pub-1590363558146928/7196039630';
+          final String _realRewardedId = 'ca-app-pub-1590363558146928/2274885449';
 
           @override
           void initState() {
@@ -310,8 +316,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 17
-                versionName = "1.9.7"
+                versionCode = 19
+                versionName = "1.9.9"
                 multiDexEnabled = true
             }
 
