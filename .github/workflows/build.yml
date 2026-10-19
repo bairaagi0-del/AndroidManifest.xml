@@ -28,10 +28,10 @@ jobs:
     - name: Write Clean pubspec.yaml
       run: |
         cat << 'EOF' > pubspec.yaml
-        name: duckshooter3d
+        name: duckshooter3dv2
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 2.0.0+20
+        version: 2.1.0+21
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -50,7 +50,7 @@ jobs:
 
     - name: Recreate Android Project Structure
       run: |
-        flutter create . --org com.rahulgupta --project-name duckshooter3d
+        flutter create . --org com.rahulgupta --project-name duckshooter3dv2
 
     - name: Fix Android Gradle Properties & Wrapper
       run: |
@@ -107,7 +107,6 @@ jobs:
           InterstitialAd? _interstitialAd;
           bool _isRewardedLoading = false;
 
-          // WORKING AD UNIT IDS FROM DUCK SHOOTER 2
           final String _realBannerId = 'ca-app-pub-1590363558146928/9630631281';
           final String _realInterstitialId = 'ca-app-pub-1590363558146928/7196039630';
           final String _realRewardedId = 'ca-app-pub-1590363558146928/2274885449';
@@ -703,12 +702,12 @@ jobs:
             const homeCtx = homeCanvas.getContext('2d');
             const V_W = 720; const V_H = 1280;
 
-            let coins = parseInt(localStorage.getItem('ds3d_v2_coins') || '0');
-            let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_v2_guns') || '[0]');
-            let equippedGun = parseInt(localStorage.getItem('ds3d_v2_equipped_gun') || '0');
-            let unlockedThemes = JSON.parse(localStorage.getItem('ds3d_v2_themes') || '[0]');
-            let activeTheme = parseInt(localStorage.getItem('ds3d_v2_active_theme') || '0');
-            let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_v2_max_lvl') || '0');
+            let coins = parseInt(localStorage.getItem('ds3d_v21_coins') || '0');
+            let unlockedGuns = JSON.parse(localStorage.getItem('ds3d_v21_guns') || '[0]');
+            let equippedGun = parseInt(localStorage.getItem('ds3d_v21_equipped_gun') || '0');
+            let unlockedThemes = JSON.parse(localStorage.getItem('ds3d_v21_themes') || '[0]');
+            let activeTheme = parseInt(localStorage.getItem('ds3d_v21_active_theme') || '0');
+            let maxUnlockedLvl = parseInt(localStorage.getItem('ds3d_v21_max_lvl') || '0');
             let selectedLevel = maxUnlockedLvl;
 
             function makeGunSvg(bodyColor, accentColor, barrelLen, hasScope, isFuturistic) {
@@ -744,12 +743,12 @@ jobs:
             ];
 
             function saveState() {
-              localStorage.setItem('ds3d_v2_coins', String(coins));
-              localStorage.setItem('ds3d_v2_guns', JSON.stringify(unlockedGuns));
-              localStorage.setItem('ds3d_v2_equipped_gun', String(equippedGun));
-              localStorage.setItem('ds3d_v2_themes', JSON.stringify(unlockedThemes));
-              localStorage.setItem('ds3d_v2_active_theme', String(activeTheme));
-              localStorage.setItem('ds3d_v2_max_lvl', String(maxUnlockedLvl));
+              localStorage.setItem('ds3d_v21_coins', String(coins));
+              localStorage.setItem('ds3d_v21_guns', JSON.stringify(unlockedGuns));
+              localStorage.setItem('ds3d_v21_equipped_gun', String(equippedGun));
+              localStorage.setItem('ds3d_v21_themes', JSON.stringify(unlockedThemes));
+              localStorage.setItem('ds3d_v21_active_theme', String(activeTheme));
+              localStorage.setItem('ds3d_v21_max_lvl', String(maxUnlockedLvl));
               const el = document.getElementById('hubCoins');
               if (el) el.innerText = coins;
               const hC = document.getElementById('homeCoinsDisplay');
@@ -1412,7 +1411,7 @@ jobs:
               playTapSound();
               if (coins >= cost) {
                 coins -= cost; unlockedThemes.push(id); activeTheme = id; saveState(); renderThemes();
-              } else { alert('Coins kam hain! 🎬 AD UNLOCK button se turant kholein.'); }
+              } else { alert('Coins kam hain! 🎬 AD UNLOCK button से turant kholein.'); }
             };
 
             canvas.addEventListener('pointerdown', (e) => handleShoot(e.clientX, e.clientY));
@@ -1472,7 +1471,7 @@ jobs:
         }
 
         android {
-            namespace = "com.rahulgupta.duckshooter3d"
+            namespace = "com.rahulgupta.duckshooter3dv2"
             compileSdk = 34
             ndkVersion = flutter.ndkVersion
 
@@ -1486,11 +1485,11 @@ jobs:
             }
 
             defaultConfig {
-                applicationId = "com.rahulgupta.duckshooter3d"
+                applicationId = "com.rahulgupta.duckshooter3dv2"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 20
-                versionName = "2.0.0"
+                versionCode = 21
+                versionName = "2.1.0"
                 multiDexEnabled = true
             }
 
