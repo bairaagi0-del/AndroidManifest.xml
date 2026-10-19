@@ -31,7 +31,7 @@ jobs:
         name: duckshooter3d
         description: Duck Hunter 3D Ultimate Expedition
         publish_to: 'none'
-        version: 1.9.3+13
+        version: 1.9.5+15
 
         environment:
           sdk: '>=3.0.0 <4.0.0'
@@ -52,7 +52,25 @@ jobs:
       run: |
         flutter create . --org com.rahulgupta --project-name duckshooter3d
 
-    - name: Write Clean lib/main.dart (Seamless AdBridge & Auto-Load)
+    - name: Fix Android Gradle Properties & Wrapper
+      run: |
+        echo "android.useAndroidX=true" > android/gradle.properties
+        echo "android.enableJetifier=true" >> android/gradle.properties
+        echo "org.gradle.jvmargs=-Xmx4G -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
+        
+        # Ensure correct gradle wrapper version
+        mkdir -p android/gradle/wrapper
+        cat << 'EOF' > android/gradle/wrapper/gradle-wrapper.properties
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+        networkTimeout=10000
+        validateDistributionUrl=true
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=gradle/wrapper
+        EOF
+
+    - name: Write Clean lib/main.dart
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -139,7 +157,7 @@ jobs:
                   setState(() {
                     _isBannerReady = false;
                   });
-                  Future.delayed(const Duration(seconds: 8), _loadBannerAd);
+                  Future.delayed(const Duration(seconds: 6), _loadBannerAd);
                 },
               ),
             )..load();
@@ -155,7 +173,7 @@ jobs:
                 },
                 onAdFailedToLoad: (error) {
                   _interstitialAd = null;
-                  Future.delayed(const Duration(seconds: 8), _loadInterstitialAd);
+                  Future.delayed(const Duration(seconds: 6), _loadInterstitialAd);
                 },
               ),
             );
@@ -225,7 +243,6 @@ jobs:
               );
               _rewardedAd = null;
             } else {
-              // Quick fallback reload attempt if user clicked before preload finished
               _loadRewardedAd();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Ad load ho raha hai, 2 second baad dobara dabayein!'), duration: Duration(seconds: 2)),
@@ -293,8 +310,8 @@ jobs:
                 applicationId = "com.rahulgupta.duckshooter3d"
                 minSdk = 24
                 targetSdk = 34
-                versionCode = 13
-                versionName = "1.9.3"
+                versionCode = 15
+                versionName = "1.9.5"
                 multiDexEnabled = true
             }
 
@@ -312,7 +329,7 @@ jobs:
         }
         EOF
 
-    - name: Clean App Icon & Remove White Lines for Indus Store
+    - name: Clean App Icon & Remove White Lines
       run: |
         python3 -m pip install --upgrade Pillow
         python3 - << 'EOF'
@@ -332,7 +349,6 @@ jobs:
 
         if valid_icon:
             src = Image.open(valid_icon).convert("RGBA")
-            # Remove any harsh borders or transparent artifacts that cause white lines on launchers
             sizes = {
                 'mipmap-mdpi': 48,
                 'mipmap-hdpi': 72,
@@ -344,10 +360,8 @@ jobs:
             for folder, sz in sizes.items():
                 target_folder = os.path.join(res_dir, folder)
                 os.makedirs(target_folder, exist_ok=True)
-                # High quality downsampling without artifacts
                 resized = src.resize((sz, sz), Image.Resampling.LANCZOS)
                 resized.save(os.path.join(target_folder, 'ic_launcher.png'), 'PNG')
-            print("Successfully processed clean icon with zero white lines!")
         EOF
 
     - name: Fix Kotlin & Gradle Versions
