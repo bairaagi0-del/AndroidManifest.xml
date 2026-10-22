@@ -1,4 +1,4 @@
-name: Build Online Mafia City Wars Release APK
+name: Build Grand Mafia City Release APK
 
 on:
   push:
@@ -25,11 +25,11 @@ jobs:
         flutter-version: '3.22.x'
         channel: 'stable'
 
-    - name: Write Clean pubspec.yaml with Firebase
+    - name: Write Clean pubspec.yaml
       run: |
         cat << 'EOF' > pubspec.yaml
-        name: mafiacitywars
-        description: Grand Underworld City Wars Online Syndicate
+        name: grandmafiacity
+        description: Grand Mafia City Open World Crime Simulator
         publish_to: 'none'
         version: 1.0.0+1
 
@@ -41,9 +41,6 @@ jobs:
             sdk: flutter
           webview_flutter: ^4.8.0
           google_mobile_ads: ^5.1.0
-          firebase_core: ^3.1.1
-          firebase_database: ^11.0.2
-          connectivity_plus: ^6.0.3
 
         flutter:
           uses-material-design: true
@@ -53,7 +50,7 @@ jobs:
 
     - name: Recreate Android Project Structure
       run: |
-        flutter create . --org com.rahulgupta --project-name mafiacitywars
+        flutter create . --org com.rahulgupta --project-name grandmafiacity
 
     - name: Fix Android Gradle Properties & Wrapper
       run: |
@@ -72,7 +69,7 @@ jobs:
         zipStorePath=gradle/wrapper
         EOF
 
-    - name: Write Clean lib/main.dart (Online & Connectivity Check)
+    - name: Write Clean lib/main.dart (Landscape Mode & AdMob Bridge)
       run: |
         mkdir -p lib
         cat << 'EOF' > lib/main.dart
@@ -81,7 +78,6 @@ jobs:
         import 'package:flutter/services.dart';
         import 'package:webview_flutter/webview_flutter.dart';
         import 'package:google_mobile_ads/google_mobile_ads.dart';
-        import 'package:connectivity_plus/connectivity_plus.dart';
 
         void main() async {
           WidgetsFlutterBinding.ensureInitialized();
@@ -92,24 +88,23 @@ jobs:
           ]);
           runApp(const MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: MafiaOnlineApp(),
+            home: GrandMafiaApp(),
           ));
         }
 
-        class MafiaOnlineApp extends StatefulWidget {
-          const MafiaOnlineApp({super.key});
+        class GrandMafiaApp extends StatefulWidget {
+          const GrandMafiaApp({super.key});
 
           @override
-          State<MafiaOnlineApp> createState() => _MafiaOnlineState();
+          State<GrandMafiaApp> createState() => _GrandMafiaState();
         }
 
-        class _MafiaOnlineState extends State<MafiaOnlineApp> {
+        class _GrandMafiaState extends State<GrandMafiaApp> {
           late final WebViewController _controller;
           BannerAd? _bannerAd;
           bool _isBannerReady = false;
           RewardedAd? _rewardedAd;
           InterstitialAd? _interstitialAd;
-          bool _isOnline = true;
 
           final String _realBannerId = 'ca-app-pub-1590363558146928/9630631281';
           final String _realInterstitialId = 'ca-app-pub-1590363558146928/7196039630';
@@ -118,7 +113,6 @@ jobs:
           @override
           void initState() {
             super.initState();
-            _checkConnectivity();
             _loadBannerAd();
             _loadInterstitialAd();
             _loadRewardedAd();
@@ -138,13 +132,6 @@ jobs:
               );
 
             _initWebView();
-          }
-
-          Future<void> _checkConnectivity() async {
-            var connectivityResult = await (Connectivity().checkConnectivity());
-            if (connectivityResult.contains(ConnectivityResult.none)) {
-              setState(() { _isOnline = false; });
-            }
           }
 
           Future<void> _initWebView() async {
@@ -221,53 +208,39 @@ jobs:
           }
 
           @override
+          void dispose() {
+            _bannerAd?.dispose();
+            _interstitialAd?.dispose();
+            _rewardedAd?.dispose();
+            super.dispose();
+          }
+
+          @override
           Widget build(BuildContext context) {
             return Scaffold(
               backgroundColor: const Color(0xFF0b0f19),
               body: SafeArea(
-                child: !_isOnline
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('🌐', style: TextStyle(fontSize: 50)),
-                            const SizedBox(height: 10),
-                            const Text('Internet Connection Required!', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 10),
-                            ElevatedButton(
-                              onPressed: () async {
-                                var res = await Connectivity().checkConnectivity();
-                                if (!res.contains(ConnectivityResult.none)) {
-                                  setState(() { _isOnline = true; });
-                                  _initWebView();
-                                }
-                              },
-                              child: const Text('RETRY'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          Expanded(
-                            child: WebViewWidget(controller: _controller),
-                          ),
-                          if (_isBannerReady && _bannerAd != null)
-                            Container(
-                              color: Colors.black,
-                              width: _bannerAd!.size.width.toDouble(),
-                              height: _bannerAd!.size.height.toDouble(),
-                              child: AdWidget(ad: _bannerAd!),
-                            ),
-                        ],
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: WebViewWidget(controller: _controller),
+                    ),
+                    if (_isBannerReady && _bannerAd != null)
+                      Container(
+                        color: Colors.black,
+                        width: _bannerAd!.size.width.toDouble(),
+                        height: _bannerAd!.size.height.toDouble(),
+                        child: AdWidget(ad: _bannerAd!),
                       ),
+                  ],
+                ),
               ),
             );
           }
         }
         EOF
 
-    - name: Create Online HTML Game Engine
+    - name: Create Open World GTA Style HTML Game Engine
       run: |
         mkdir -p assets
         cat << 'EOF' > assets/index.html
@@ -276,147 +249,278 @@ jobs:
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-          <title>Grand Underworld: Online Wars</title>
+          <title>Grand Mafia City: Open World</title>
           <style>
             * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
-            html, body { width: 100%; height: 100%; overflow: hidden; background: #080b12; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+            html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0f19; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
             #gameContainer { position: relative; width: 100vw; height: 100vh; background: #0b0f19; overflow: hidden; display: flex; align-items: center; justify-content: center; }
             canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: rgba(11, 15, 25, 0.94); }
-            .title-glow { font-size: 38px; font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase; text-shadow: 0 0 20px rgba(245, 158, 11, 0.6); }
+            
+            .screen { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: rgba(11, 15, 25, 0.95); }
+            .title-glow { font-size: 40px; font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase; text-shadow: 0 0 25px rgba(245, 158, 11, 0.7); text-align: center; }
             .subtitle-badge { font-size: 12px; font-weight: 800; color: #cbd5e1; background: #1e293b; padding: 4px 16px; border-radius: 12px; border: 1px solid #334155; margin-top: 6px; letter-spacing: 3px; }
-            .mafia-btn { background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); border: 2px solid #fde047; color: #fff; font-size: 15px; font-weight: 900; padding: 12px 30px; border-radius: 24px; cursor: pointer; box-shadow: 0 6px 0 #78350f, 0 10px 20px rgba(0,0,0,0.7); text-transform: uppercase; margin: 8px; }
+            
+            .mafia-btn { background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); border: 2px solid #fde047; color: #fff; font-size: 16px; font-weight: 900; padding: 12px 32px; border-radius: 24px; cursor: pointer; box-shadow: 0 6px 0 #78350f, 0 10px 20px rgba(0,0,0,0.7); text-transform: uppercase; margin: 10px; }
+            .mafia-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #78350f; }
             .btn-green { background: linear-gradient(180deg, #10b981 0%, #047857 100%); border-color: #6ee7b7; box-shadow: 0 6px 0 #064e3b; }
             .btn-blue { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); border-color: #93c5fd; box-shadow: 0 6px 0 #1e3a8a; }
-            .btn-red { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); border-color: #fca5a5; box-shadow: 0 6px 0 #7f1d1d; }
+
             .hud-bar { position: absolute; top: 12px; left: 16px; right: 16px; display: none; justify-content: space-between; align-items: center; z-index: 30; pointer-events: none; }
-            .hud-pill { background: rgba(15, 23, 42, 0.88); border: 2px solid #334155; color: #f8fafc; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+            .hud-pill { background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; color: #f8fafc; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
+
             .gamepad { position: absolute; bottom: 16px; left: 16px; right: 16px; display: none; justify-content: space-between; align-items: flex-end; z-index: 30; pointer-events: none; }
             .pad-cluster { display: flex; gap: 10px; pointer-events: auto; }
-            .control-circle-btn { width: 56px; height: 56px; border-radius: 50%; background: rgba(30, 41, 59, 0.9); border: 2px solid #64748b; color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+            .control-circle-btn { width: 58px; height: 58px; border-radius: 50%; background: rgba(30, 41, 59, 0.92); border: 2px solid #64748b; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.6); cursor: pointer; font-weight: 900; }
+            .control-circle-btn:active { background: #475569; transform: scale(0.95); }
           </style>
         </head>
         <body>
           <div id="gameContainer">
+            <!-- HOME MENU -->
             <div id="homeScreen" class="screen">
-              <div class="title-glow">ONLINE SYNDICATE</div>
-              <div class="subtitle-badge">CLOUD CLAN WARS</div>
-              <div style="margin: 20px 0; display: flex; gap: 15px;">
-                <button class="mafia-btn btn-green" onclick="startGame()">🌐 ONLINE RAID</button>
+              <div class="title-glow">GRAND MAFIA CITY</div>
+              <div class="subtitle-badge">OPEN WORLD STREET WARS</div>
+              <div style="margin: 25px 0; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <button class="mafia-btn btn-green" onclick="startGame()">🔫 START CRIME SPREE</button>
+                <button class="mafia-btn btn-blue" onclick="requestRewardedAd()">🪙 FREE CASH (WATCH AD)</button>
               </div>
-              <div style="color: #10b981; font-size: 12px; font-weight: 700; margin-top: 10px;">🟢 SERVER STATUS: ONLINE</div>
+              <div style="color: #94a3b8; font-size: 13px; font-weight: 700;">TOTAL CASH: <span id="homeCash" style="color:#10b981;">500</span></div>
             </div>
 
+            <!-- HUD -->
             <div id="hudBar" class="hud-bar">
               <div class="hud-pill">🛡️ HEALTH: <span id="uiHealth" style="color:#ef4444;">100%</span></div>
-              <div class="hud-pill">🌐 SYNC CLAN SCORE: <span id="uiScore" style="color:#f59e0b;">0/10</span></div>
-              <button class="mafia-btn btn-red" style="padding: 4px 12px; font-size: 11px; margin:0; pointer-events:auto;" onclick="abortGame()">EXIT</button>
+              <div class="hud-pill">🪙 CASH: <span id="uiCash" style="color:#10b981;">500</span></div>
+              <div class="hud-pill">⭐ LEVEL: <span id="uiLevel" style="color:#f59e0b;">1</span> (EXP: <span id="uiExp">0</span>)</div>
+              <div class="hud-pill">🚨 WANTED: <span id="uiWanted" style="color:#ef4444;">☆☆☆☆☆</span></div>
             </div>
 
+            <!-- CONTROLS -->
             <div id="gamepad" class="gamepad">
               <div class="pad-cluster">
-                <div class="control-circle-btn" ontouchstart="movePlayer(-1)" onmousedown="movePlayer(-1)">◀</div>
-                <div class="control-circle-btn" ontouchstart="movePlayer(1)" onmousedown="movePlayer(1)">▶</div>
+                <div class="control-circle-btn" ontouchstart="setMove(-1, 0)" ontouchend="setMove(0,0)" onmousedown="setMove(-1, 0)" onmouseup="setMove(0,0)">◀</div>
+                <div class="control-circle-btn" ontouchstart="setMove(1, 0)" ontouchend="setMove(0,0)" onmousedown="setMove(1, 0)" onmouseup="setMove(0,0)">▶</div>
+                <div class="control-circle-btn" ontouchstart="setMove(0, -1)" ontouchend="setMove(0,0)" onmousedown="setMove(0, -1)" onmouseup="setMove(0,0)">▲</div>
+                <div class="control-circle-btn" ontouchstart="setMove(0, 1)" ontouchend="setMove(0,0)" onmousedown="setMove(0, 1)" onmouseup="setMove(0,0)">▼</div>
               </div>
               <div class="pad-cluster">
+                <div class="control-circle-btn" style="background:#1d4ed8; border-color:#93c5fd;" ontouchstart="toggleCarAction()" onmousedown="toggleCarAction()">🚗</div>
                 <div class="control-circle-btn" style="background:#b91c1c; border-color:#fca5a5;" ontouchstart="playerShoot()" onmousedown="playerShoot()">🔥</div>
               </div>
             </div>
 
+            <!-- CANVAS -->
             <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
+            <!-- GAMEOVER SCREEN -->
             <div id="gameOverScreen" class="screen" style="display:none;">
-              <div class="title-glow" style="color:#ef4444;">RAID FAILED</div>
-              <button class="mafia-btn btn-green" onclick="startGame()">RETRY RAID</button>
-              <button class="mafia-btn btn-blue" onclick="backToHome()">MAIN MENU</button>
-            </div>
-
-            <div id="winScreen" class="screen" style="display:none;">
-              <div class="title-glow" style="color:#10b981;">CLOUD TERRITORY SECURED!</div>
-              <button class="mafia-btn btn-green" onclick="startGame()">NEXT RAID</button>
+              WASTED! Police & Rival Syndicate Got You.
+              <button class="mafia-btn btn-green" onclick="startGame()">RESPAWN</button>
               <button class="mafia-btn btn-blue" onclick="backToHome()">MAIN MENU</button>
             </div>
           </div>
 
           <script>
+            let cash = parseInt(localStorage.getItem('mafia_cash') || '500');
             let isRunning = false;
-            let playerX = 150, playerY = 520, playerHealth = 100, score = 0, targetScore = 10;
-            let bullets = [], enemies = [];
+            let player = { x: 640, y: 360, vx: 0, vy: 0, speed: 3.5, health: 100, level: 1, exp: 0, wanted: 0, inCar: false, carId: null, angle: 0 };
+            let moveDir = { x: 0, y: 0 };
+            let cars = [];
+            let pedestrians = [];
+            let cops = [];
+            let bullets = [];
+
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
 
             function updateUI() {
-              document.getElementById('uiHealth').innerText = playerHealth + '%';
-              document.getElementById('uiScore').innerText = score + '/' + targetScore;
+              document.getElementById('homeCash').innerText = cash;
+              document.getElementById('uiCash').innerText = cash;
+              document.getElementById('uiHealth').innerText = player.health + '%';
+              document.getElementById('uiLevel').innerText = player.level;
+              document.getElementById('uiExp').innerText = player.exp;
+              let stars = '';
+              for(let i=0; i<Math.min(player.wanted, 5); i++) stars += '★';
+              for(let i=player.wanted; i<5; i++) stars += '☆';
+              document.getElementById('uiWanted').innerText = stars;
             }
 
             function backToHome() {
               document.getElementById('gameOverScreen').style.display = 'none';
-              document.getElementById('winScreen').style.display = 'none';
               document.getElementById('homeScreen').style.display = 'flex';
             }
+
+            function requestRewardedAd() {
+              if (window.AdMobBridge) window.AdMobBridge.postMessage('showRewarded');
+              else alert('Ads only load inside the Android APK.');
+            }
+
+            window.onRewardedAdReward = function() {
+              cash += 300; localStorage.setItem('mafia_cash', cash);
+              updateUI();
+              alert('🪙 +300 Cash Added to Safehouse!');
+            };
 
             function startGame() {
               document.getElementById('homeScreen').style.display = 'none';
               document.getElementById('gameOverScreen').style.display = 'none';
-              document.getElementById('winScreen').style.display = 'none';
               document.getElementById('hudBar').style.display = 'flex';
               document.getElementById('gamepad').style.display = 'flex';
-              playerHealth = 100; score = 0; playerX = 150; bullets = []; enemies = [];
+
+              player.x = 640; player.y = 360; player.health = 100; player.inCar = false; player.wanted = 1;
+              cars = [
+                { id: 1, x: 400, y: 300, vx: 2, color: '#ef4444', angle: 0, hasDriver: true },
+                { id: 2, x: 900, y: 500, vx: -2, color: '#3b82f6', angle: Math.PI, hasDriver: true },
+                { id: 3, x: 600, y: 150, vx: 0, vy: 2, color: '#10b981', angle: Math.PI/2, hasDriver: true }
+              ];
+              pedestrians = [
+                { x: 300, y: 300, health: 10 }, { x: 950, y: 200, health: 10 }, { x: 500, y: 600, health: 10 }
+              ];
+              cops = [
+                { x: 200, y: 100, health: 25, vx: 1, vy: 1 }
+              ];
+              bullets = [];
               isRunning = true;
-              for(let i=0; i<4; i++) enemies.push({ x: 700 + i * 140, y: 520, vx: -1.2, health: 2 });
               gameLoop();
             }
 
-            function abortGame() {
-              isRunning = false;
-              document.getElementById('hudBar').style.display = 'none';
-              document.getElementById('gamepad').style.display = 'none';
-              backToHome();
-            }
+            function setMove(x, y) { moveDir.x = x; moveDir.y = y; }
 
-            function movePlayer(dir) { playerX = Math.max(50, Math.min(1000, playerX + dir * 35)); }
-            function playerShoot() { bullets.push({ x: playerX + 40, y: playerY - 20, vx: 16 }); }
-
-            function gameLoop() {
-              if (!isRunning) return;
-              ctx.fillStyle = '#0b0f19'; ctx.fillRect(0, 0, 1280, 720);
-              ctx.fillStyle = '#1e293b'; ctx.fillRect(100, 200, 180, 360); ctx.fillRect(680, 250, 200, 310);
-              ctx.fillStyle = '#111827'; ctx.fillRect(0, 560, 1280, 160);
-              ctx.fillStyle = '#f59e0b'; ctx.fillRect(0, 556, 1280, 4);
-
-              ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(playerX, playerY - 45, 18, 0, Math.PI*2); ctx.fill();
-              ctx.fillStyle = '#1e3a8a'; ctx.fillRect(playerX - 16, playerY - 30, 32, 45);
-
-              ctx.fillStyle = '#fde047';
-              for (let i = bullets.length - 1; i >= 0; i--) {
-                let b = bullets[i]; b.x += b.vx; ctx.fillRect(b.x, b.y, 12, 4);
-                if (b.x > 1280) bullets.splice(i, 1);
-              }
-
-              for (let i = enemies.length - 1; i >= 0; i--) {
-                let en = enemies[i]; en.x += en.vx;
-                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(en.x, en.y - 45, 18, 0, Math.PI*2); ctx.fill();
-                
-                for (let j = bullets.length - 1; j >= 0; j--) {
-                  let b = bullets[j];
-                  if (Math.hypot(b.x - en.x, b.y - en.y) < 35) {
-                    en.health--; bullets.splice(j, 1);
-                    if (en.health <= 0) {
-                      enemies.splice(i, 1); score++; updateUI();
-                      if (score >= targetScore) {
-                        isRunning = false;
-                        document.getElementById('hudBar').style.display = 'none';
-                        document.getElementById('gamepad').style.display = 'none';
-                        document.getElementById('winScreen').style.display = 'flex';
-                        return;
-                      }
-                      setTimeout(() => { if(isRunning) enemies.push({ x: 1250, y: 520, vx: -1.4, health: 2 }); }, 1000);
-                    }
+            function toggleCarAction() {
+              if (player.inCar) {
+                // Exit car
+                player.inCar = false;
+                player.x += 40;
+                player.carId = null;
+              } else {
+                // Check nearby car for carjacking
+                for (let c of cars) {
+                  let dist = Math.hypot(player.x - c.x, player.y - c.y);
+                  if (dist < 60) {
+                    player.inCar = true;
+                    player.carId = c.id;
+                    c.hasDriver = false;
+                    c.vx = 0; c.vy = 0;
+                    player.wanted = Math.min(5, player.wanted + 1);
                     break;
                   }
                 }
               }
+            }
+
+            function playerShoot() {
+              bullets.push({ x: player.x, y: player.y, vx: Math.cos(player.angle) * 12, vy: Math.sin(player.angle) * 12, fromPlayer: true });
+              player.wanted = Math.min(5, player.wanted + 1);
+            }
+
+            function gameLoop() {
+              if (!isRunning) return;
+
+              // Background City Grid
+              ctx.fillStyle = '#111827';
+              ctx.fillRect(0, 0, 1280, 720);
+
+              // Roads
+              ctx.fillStyle = '#1f2937';
+              ctx.fillRect(0, 260, 1280, 200);
+              ctx.fillRect(540, 0, 200, 720);
+
+              // Road dashes
+              ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4; ctx.setLineDash([20, 20]);
+              ctx.beginPath(); ctx.moveTo(0, 360); ctx.lineTo(1280, 360); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(640, 0); ctx.lineTo(640, 720); ctx.stroke();
+              ctx.setLineDash([]);
+
+              // Update Player
+              if (moveDir.x !== 0 || moveDir.y !== 0) {
+                player.vx = moveDir.x * (player.inCar ? 6 : player.speed);
+                player.vy = moveDir.y * (player.inCar ? 6 : player.speed);
+                player.angle = Math.atan2(moveDir.y, moveDir.x);
+              } else {
+                player.vx *= 0.8; player.vy *= 0.8;
+              }
+              player.x = Math.max(30, Math.min(1250, player.x + player.vx));
+              player.y = Math.max(30, Math.min(690, player.y + player.vy));
+
+              // Draw Cars
+              for (let c of cars) {
+                if (c.hasDriver) {
+                  c.x += c.vx; c.y += (c.vy || 0);
+                  if (c.x > 1300 || c.x < -50) c.vx *= -1;
+                }
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.rotate(c.angle);
+                ctx.fillStyle = c.color;
+                ctx.fillRect(-30, -16, 60, 32);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-15, -12, 12, 8); // windshield
+                ctx.restore();
+              }
+
+              // Draw Player / Car
+              ctx.save();
+              ctx.translate(player.x, player.y);
+              ctx.rotate(player.angle);
+              if (player.inCar) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(-32, -18, 64, 36);
+                ctx.fillStyle = '#111';
+                ctx.fillRect(-10, -14, 14, 10);
+              } else {
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#2563eb';
+                ctx.fillRect(-6, -6, 16, 12);
+              }
+              ctx.restore();
+
+              // Update Bullets
+              ctx.fillStyle = '#fde047';
+              for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.vx; b.y += b.vy;
+                ctx.fillRect(b.x, b.y, 8, 8);
+                if (b.x < 0 || b.x > 1280 || b.y < 0 || b.y > 720) {
+                  bullets.splice(i, 1);
+                }
+              }
+
+              // Update Cops & Police Chase
+              for (let i = cops.length - 1; i >= 0; i--) {
+                let cp = cops[i];
+                if (player.wanted > 0) {
+                  let angle = Math.atan2(player.y - cp.y, player.x - cp.x);
+                  cp.x += Math.cos(angle) * 2.2;
+                  cp.y += Math.sin(angle) * 2.2;
+                }
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath(); ctx.arc(cp.x, cp.y, 14, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(cp.x - 6, cp.y - 18, 12, 6); // Police siren
+
+                // Bullet collision with cop
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                  let b = bullets[j];
+                  if (b.fromPlayer && Math.hypot(b.x - cp.x, b.y - cp.y) < 20) {
+                    cops.splice(i, 1);
+                    bullets.splice(j, 1);
+                    cash += 150;
+                    player.exp += 50;
+                    if (player.exp >= player.level * 100) {
+                      player.level++;
+                      player.exp = 0;
+                    }
+                    updateUI();
+                    // Respawn cop
+                    setTimeout(() => {
+                      if(isRunning) cops.push({ x: Math.random() * 1200, y: Math.random() * 700, health: 25 });
+                    }, 3000);
+                    break;
+                  }
+                }
+              }
+
               requestAnimationFrame(gameLoop);
             }
           </script>
@@ -434,7 +538,7 @@ jobs:
         }
 
         android {
-            namespace = "com.rahulgupta.mafiacitywars"
+            namespace = "com.rahulgupta.grandmafiacity"
             compileSdk = 34
             ndkVersion = flutter.ndkVersion
 
@@ -448,7 +552,7 @@ jobs:
             }
 
             defaultConfig {
-                applicationId = "com.rahulgupta.mafiacitywars"
+                applicationId = "com.rahulgupta.grandmafiacity"
                 minSdk = 24
                 targetSdk = 34
                 versionCode = 1
@@ -496,5 +600,5 @@ jobs:
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: mafia-online-apk
+        name: grand-mafia-city-apk
         path: build/app/outputs/flutter-apk/app-release.apk
