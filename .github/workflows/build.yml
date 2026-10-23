@@ -51,37 +51,53 @@ jobs:
       - name: Recreate Android Project Structure
         run: flutter create . --org com.rahulgupta --project-name speedracer
 
-      - name: Process Uploaded Car Picture & Generate Android Launcher Icons
+      - name: Apply Uploaded Red Bull Car Emblem as Official Launcher Icon
         run: |
           pip install Pillow
           python3 -c "
-          import os, glob
+          import os, glob, shutil
           from PIL import Image
 
-          # Find the uploaded car racing picture
-          search_files = glob.glob('*.png') + glob.glob('*.jpg') + glob.glob('*.jpeg') + glob.glob('assets/*.png')
+          # Remove adaptive icon XML folder so Android uses our PNG icon directly
+          anydpi_dir = 'android/app/src/main/res/mipmap-anydpi-v26'
+          if os.path.exists(anydpi_dir):
+              shutil.rmtree(anydpi_dir, ignore_errors=True)
+
+          # Search repository for the uploaded Red Bull Racing Speed Emblem image
+          candidates = []
+          for ext in ('*.png', '*.jpg', '*.jpeg', '**/*.png', '**/*.jpg'):
+              for f in glob.glob(ext, recursive=True):
+                  if 'android/' in f or 'build/' in f or 'ios/' in f or 'web/' in f:
+                      continue
+                  candidates.append(f)
+
           source_img = None
-          for f in search_files:
-              if any(k in f.lower() for k in ['car', 'racing', 'emblem', 'red', 'bull', 'speed', '_2']):
+          for f in candidates:
+              low = os.path.basename(f).lower()
+              if 'red bull' in low or 'emblem' in low or 'racing' in low:
                   source_img = f
                   break
-          if not source_img and search_files:
-              source_img = search_files[0]
+          if not source_img and candidates:
+              source_img = candidates[0]
 
-          print(f'Using source image for launcher icon: {source_img}')
+          print(f'Selected Uploaded Icon File: {source_img}')
 
-          sizes = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
+          sizes = {
+              'mipmap-mdpi': 48,
+              'mipmap-hdpi': 72,
+              'mipmap-xhdpi': 96,
+              'mipmap-xxhdpi': 144,
+              'mipmap-xxxhdpi': 192
+          }
           for folder, size in sizes.items():
               d_path = f'android/app/src/main/res/{folder}'
               os.makedirs(d_path, exist_ok=True)
-              if source_img:
+              if source_img and os.path.exists(source_img):
                   img = Image.open(source_img).convert('RGBA')
                   img = img.resize((size, size), Image.Resampling.LANCZOS)
-              else:
-                  img = Image.new('RGBA', (size, size), (10, 14, 26, 255))
-              img.save(f'{d_path}/ic_launcher.png')
-              img.save(f'{d_path}/ic_launcher_round.png')
-          print('Car racing launcher icons generated successfully!')
+                  img.save(f'{d_path}/ic_launcher.png')
+                  img.save(f'{d_path}/ic_launcher_round.png')
+          print('Launcher icons updated successfully!')
           "
 
       - name: Fix Android Gradle Properties & Wrapper
@@ -100,7 +116,7 @@ jobs:
           zipStorePath=gradle/wrapper
           EOF
 
-      - name: Write Clean lib/main.dart
+      - name: Write Clean lib/main.dart with Active Banner & Preloaded Ads
         run: |
           mkdir -p lib
           cat << 'EOF' > lib/main.dart
@@ -170,16 +186,23 @@ jobs:
             }
 
             void _loadBannerAd() {
+              _bannerAd?.dispose();
               _bannerAd = BannerAd(
                 adUnitId: _realBannerId,
                 request: const AdRequest(),
                 size: AdSize.banner,
                 listener: BannerAdListener(
-                  onAdLoaded: (ad) { setState(() { _isBannerReady = true; }); },
+                  onAdLoaded: (ad) {
+                    if (mounted) {
+                      setState(() { _isBannerReady = true; });
+                    }
+                  },
                   onAdFailedToLoad: (ad, err) {
                     ad.dispose();
-                    setState(() { _isBannerReady = false; });
-                    Future.delayed(const Duration(seconds: 3), _loadBannerAd);
+                    if (mounted) {
+                      setState(() { _isBannerReady = false; });
+                    }
+                    Future.delayed(const Duration(seconds: 4), _loadBannerAd);
                   },
                 ),
               )..load();
@@ -191,7 +214,10 @@ jobs:
                 request: const AdRequest(),
                 adLoadCallback: InterstitialAdLoadCallback(
                   onAdLoaded: (ad) { _interstitialAd = ad; },
-                  onAdFailedToLoad: (error) { _interstitialAd = null; Future.delayed(const Duration(seconds: 3), _loadInterstitialAd); },
+                  onAdFailedToLoad: (error) {
+                    _interstitialAd = null;
+                    Future.delayed(const Duration(seconds: 4), _loadInterstitialAd);
+                  },
                 ),
               );
             }
@@ -199,8 +225,16 @@ jobs:
             void _showInterstitialAd() {
               if (_interstitialAd != null) {
                 _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-                  onAdDismissedFullScreenContent: (ad) { ad.dispose(); _interstitialAd = null; _loadInterstitialAd(); },
-                  onAdFailedToShowFullScreenContent: (ad, error) { ad.dispose(); _interstitialAd = null; _loadInterstitialAd(); },
+                  onAdDismissedFullScreenContent: (ad) {
+                    ad.dispose();
+                    _interstitialAd = null;
+                    _loadInterstitialAd();
+                  },
+                  onAdFailedToShowFullScreenContent: (ad, error) {
+                    ad.dispose();
+                    _interstitialAd = null;
+                    _loadInterstitialAd();
+                  },
                 );
                 _interstitialAd!.show();
                 _interstitialAd = null;
@@ -215,7 +249,10 @@ jobs:
                 request: const AdRequest(),
                 rewardedAdLoadCallback: RewardedAdLoadCallback(
                   onAdLoaded: (ad) { _rewardedAd = ad; },
-                  onAdFailedToLoad: (error) { _rewardedAd = null; Future.delayed(const Duration(seconds: 3), _loadRewardedAd); },
+                  onAdFailedToLoad: (error) {
+                    _rewardedAd = null;
+                    Future.delayed(const Duration(seconds: 4), _loadRewardedAd);
+                  },
                 ),
               );
             }
@@ -231,6 +268,7 @@ jobs:
                   onAdFailedToShowFullScreenContent: (ad, error) {
                     ad.dispose();
                     _rewardedAd = null;
+                    _controller.runJavaScript("if(window.onAdNotLoaded) window.onAdNotLoaded();");
                     _loadRewardedAd();
                   },
                 );
@@ -262,13 +300,22 @@ jobs:
                   child: Column(
                     children: [
                       Expanded(child: WebViewWidget(controller: _controller)),
-                      if (_isBannerReady && _bannerAd != null)
-                        Container(
-                          color: Colors.black,
-                          width: _bannerAd!.size.width.toDouble(),
-                          height: _bannerAd!.size.height.toDouble(),
-                          child: AdWidget(ad: _bannerAd!),
-                        ),
+                      Container(
+                        width: double.infinity,
+                        height: 50,
+                        color: const Color(0xFF090D16),
+                        alignment: Alignment.center,
+                        child: (_isBannerReady && _bannerAd != null)
+                            ? SizedBox(
+                                width: _bannerAd!.size.width.toDouble(),
+                                height: _bannerAd!.size.height.toDouble(),
+                                child: AdWidget(ad: _bannerAd!),
+                              )
+                            : const Text(
+                                'SPONSORED • AD LOADING...',
+                                style: TextStyle(color: Color(0xFF475569), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                              ),
+                      ),
                     ],
                   ),
                 ),
@@ -293,30 +340,33 @@ jobs:
           html, body { width: 100%; height: 100%; overflow: hidden; background: #030712; font-family: system-ui, -apple-system, sans-serif; }
           #gameContainer { position: relative; width: 100vw; height: 100vh; background: #030712; overflow: hidden; }
           canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
-          .screen { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; background: radial-gradient(circle at center, rgba(15, 23, 42, 0.78) 0%, rgba(3, 7, 18, 0.95) 100%); backdrop-filter: blur(8px); }
-          .title-animated { font-size: clamp(26px, 5vw, 48px); font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase; font-style: italic; text-shadow: 0 0 25px rgba(239, 68, 68, 0.9), 0 4px 12px #000; text-align: center; }
-          .arcade-btn { background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); border: 2px solid #fde047; color: #fff; font-size: 13px; font-weight: 900; padding: 10px 22px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 0 #78350f, 0 8px 16px rgba(0,0,0,0.8); text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+          .screen { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 16px; background: radial-gradient(circle at center, rgba(15, 23, 42, 0.82) 0%, rgba(3, 7, 18, 0.96) 100%); backdrop-filter: blur(8px); }
+          .title-animated { font-size: clamp(22px, 4vw, 38px); font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase; font-style: italic; text-shadow: 0 0 20px rgba(239, 68, 68, 0.9), 0 4px 10px #000; text-align: center; line-height: 1.1; }
+          .arcade-btn { background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); border: 2px solid #fde047; color: #fff; font-size: 12px; font-weight: 900; padding: 8px 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 0 #78350f, 0 6px 14px rgba(0,0,0,0.8); text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
           .arcade-btn:active { transform: translateY(3px); }
           .btn-green { background: linear-gradient(180deg, #10b981 0%, #047857 100%); border-color: #6ee7b7; box-shadow: 0 4px 0 #064e3b; }
           .btn-blue { background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border-color: #7dd3fc; box-shadow: 0 4px 0 #0c4a6e; }
           .btn-purple { background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%); border-color: #c4b5fd; box-shadow: 0 4px 0 #4c1d95; }
           .btn-red { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); border-color: #fca5a5; box-shadow: 0 4px 0 #7f1d1d; }
-          .hud-bar { position: absolute; top: 10px; left: 14px; right: 14px; display: none; justify-content: space-between; align-items: center; z-index: 30; pointer-events: none; gap: 8px; }
+          .choice-chip { background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; color: #cbd5e1; font-size: 10px; font-weight: 800; padding: 6px 11px; border-radius: 12px; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+          .choice-chip.active-theme { border-color: #f59e0b; background: rgba(245, 158, 11, 0.22); color: #fde047; box-shadow: 0 0 12px rgba(245, 158, 11, 0.45); transform: scale(1.04); }
+          .choice-chip.active-mood { border-color: #38bdf8; background: rgba(56, 189, 248, 0.22); color: #bae6fd; box-shadow: 0 0 12px rgba(56, 189, 248, 0.45); transform: scale(1.04); }
+          .hud-bar { position: absolute; top: 8px; left: 14px; right: 14px; display: none; justify-content: space-between; align-items: center; z-index: 30; pointer-events: none; gap: 8px; }
           .hud-cluster { display: flex; align-items: center; gap: 8px; }
-          .hud-card { background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(56, 189, 248, 0.4); border-bottom: 3px solid #0284c7; color: #f8fafc; padding: 5px 12px; border-radius: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 15px rgba(0,0,0,0.7); }
-          .hud-exit-btn { pointer-events: auto; cursor: pointer; background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%); border: 2px solid #fca5a5; color: #fff; font-weight: 900; font-size: 12px; padding: 8px 14px; border-radius: 12px; box-shadow: 0 4px 12px rgba(239,68,68,0.5); }
-          .gamepad { position: absolute; bottom: 14px; left: 18px; right: 18px; display: none; justify-content: space-between; align-items: flex-end; z-index: 30; pointer-events: none; }
+          .hud-card { background: rgba(15, 23, 42, 0.92); border: 1.5px solid rgba(56, 189, 248, 0.4); border-bottom: 3px solid #0284c7; color: #f8fafc; padding: 4px 11px; border-radius: 12px; display: flex; align-items: center; gap: 7px; box-shadow: 0 6px 15px rgba(0,0,0,0.7); }
+          .hud-exit-btn { pointer-events: auto; cursor: pointer; background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%); border: 2px solid #fca5a5; color: #fff; font-weight: 900; font-size: 11px; padding: 6px 12px; border-radius: 10px; box-shadow: 0 4px 12px rgba(239,68,68,0.5); }
+          .gamepad { position: absolute; bottom: 10px; left: 18px; right: 18px; display: none; justify-content: space-between; align-items: flex-end; z-index: 30; pointer-events: none; }
           .pad-cluster { display: flex; gap: 14px; pointer-events: auto; align-items: flex-end; }
-          .horn-btn { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 3px solid #fde047; color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #78350f; cursor: pointer; margin-bottom: 8px; }
+          .horn-btn { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 3px solid #fde047; color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #78350f; cursor: pointer; margin-bottom: 6px; }
           .car-pedal { position: relative; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.9); }
-          .pedal-accel { width: 58px; height: 124px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
+          .pedal-accel { width: 56px; height: 118px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
           .pedal-accel.pressed { transform: scaleY(0.92); border-color: #10b981; box-shadow: 0 0 18px #10b981; }
-          .pedal-brake-real { width: 70px; height: 86px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
+          .pedal-brake-real { width: 68px; height: 82px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
           .pedal-brake-real.pressed { transform: scaleY(0.92); border-color: #ef4444; box-shadow: 0 0 18px #ef4444; }
-          .pedal-grip { width: 80%; height: 7px; background: #090d16; border-radius: 4px; }
-          #steeringHandleWrap { width: 140px; height: 115px; position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
-          .steer-btn { width: 62px; height: 62px; border-radius: 50%; background: #1e293b; border: 3px solid #64748b; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; }
-          .garage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 56vh; overflow-y: auto; width: 100%; max-width: 880px; padding: 10px; touch-action: pan-y; }
+          .pedal-grip { width: 80%; height: 6px; background: #090d16; border-radius: 4px; }
+          #steeringHandleWrap { width: 136px; height: 110px; position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+          .steer-btn { width: 58px; height: 58px; border-radius: 50%; background: #1e293b; border: 3px solid #64748b; color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; }
+          .garage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 58vh; overflow-y: auto; width: 100%; max-width: 880px; padding: 10px; touch-action: pan-y; }
           .car-card { background: #1e293b; border: 2px solid #334155; border-radius: 16px; padding: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; }
           .car-card.selected { border-color: #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
           #customModal { position: absolute; inset: 0; background: rgba(3, 7, 18, 0.92); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -325,103 +375,136 @@ jobs:
           <body>
           <div id="gameContainer">
           <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+          <!-- HOME SCREEN WITH SEPARATE THEME & WEATHER BUTTONS -->
           <div id="homeScreen" class="screen">
-          <div class="flex items-center gap-3 bg-slate-900/90 border border-red-500/50 px-4 py-1.5 rounded-full mb-2 shadow-lg">
-          <svg width="36" height="20" viewBox="0 0 120 60"><circle cx="60" cy="30" r="22" fill="#facc15"/><path d="M12 38 L42 22 L55 32 L38 44 Z" fill="#ef4444"/><path d="M108 38 L78 22 L65 32 L82 44 Z" fill="#ef4444"/></svg>
-          <span class="text-xs font-black tracking-widest text-amber-400 uppercase">RED BULL F1 TURBO CHAMPIONSHIP</span>
+            <div class="flex items-center gap-2 bg-slate-900/90 border border-red-500/50 px-3 py-1 rounded-full mb-1 shadow-lg">
+              <svg width="32" height="16" viewBox="0 0 120 60"><circle cx="60" cy="30" r="22" fill="#facc15"/><path d="M12 38 L42 22 L55 32 L38 44 Z" fill="#ef4444"/><path d="M108 38 L78 22 L65 32 L82 44 Z" fill="#ef4444"/></svg>
+              <span class="text-[10px] font-black tracking-widest text-amber-400 uppercase">RED BULL F1 TURBO CHAMPIONSHIP</span>
+            </div>
+            <div class="title-animated">APEX TURBO F1 & GT</div>
+
+            <div class="flex items-center justify-center gap-6 my-1 w-full max-w-3xl">
+              <div id="homeCarPreview" class="w-24 h-24 flex items-center justify-center filter drop-shadow-[0_8px_18px_rgba(245,158,11,0.55)]"></div>
+
+              <div class="flex flex-col gap-2 bg-slate-900/80 border border-slate-700/80 p-2.5 rounded-2xl">
+                <div class="text-[10px] font-black text-amber-400 tracking-wider uppercase text-left">🌍 SELECT WORLD TRACK (ALAG-ALAG THEMES):</div>
+                <div class="flex flex-wrap gap-1.5" id="themeButtonsWrap">
+                  <button class="choice-chip active-theme" onclick="selectTheme(0)">🏜️ SAHARA DESERT</button>
+                  <button class="choice-chip" onclick="selectTheme(1)">🌴 AMAZON JUNGLE</button>
+                  <button class="choice-chip" onclick="selectTheme(2)">🌃 CYBER CITY</button>
+                  <button class="choice-chip" onclick="selectTheme(3)">🏔️ HIMALAYA SNOW</button>
+                </div>
+
+                <div class="text-[10px] font-black text-sky-400 tracking-wider uppercase text-left mt-1">🌦️ SELECT WEATHER MOOD:</div>
+                <div class="flex flex-wrap gap-1.5" id="moodButtonsWrap">
+                  <button class="choice-chip active-mood" onclick="selectMood(0)">☀️ SUNNY DAY</button>
+                  <button class="choice-chip" onclick="selectMood(1)">🌙 MIDNIGHT</button>
+                  <button class="choice-chip" onclick="selectMood(2)">🌧️ HEAVY RAIN</button>
+                  <button class="choice-chip" onclick="selectMood(3)">⛈️ THUNDER STORM</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-2.5 mt-2">
+              <button class="arcade-btn btn-green" onclick="startGameSession()">🏁 START RACE</button>
+              <button class="arcade-btn btn-blue" onclick="openGarage()">🏎️ 50 CARS GARAGE</button>
+              <button class="arcade-btn btn-purple" onclick="openSettings()">⚙️ CONTROLS</button>
+              <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red" style="text-decoration:none;">▶️ @THEGOVINDGUPTA</a>
+            </div>
           </div>
-          <div class="title-animated">APEX TURBO F1 & GT</div>
-          <div id="homeCarPreview" class="my-2 w-32 h-24 flex items-center justify-center filter drop-shadow-[0_10px_20px_rgba(245,158,11,0.5)]"></div>
-          <div class="flex flex-wrap items-center justify-center gap-2 my-2">
-          <button class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleTheme()">🌍 <span id="homeThemeLabel">SAHARA DESERT</span></button>
-          <button class="arcade-btn btn-purple" style="padding:6px 14px; font-size:11px;" onclick="cycleMood()">🌦️ <span id="homeMoodLabel">SUNNY DAY</span></button>
-          </div>
-          <div class="flex flex-wrap items-center justify-center gap-3 my-3">
-          <button class="arcade-btn btn-green" onclick="startGameSession()">🏁 START RACE</button>
-          <button class="arcade-btn btn-blue" onclick="openGarage()">🏎️ 50 CARS</button>
-          <button class="arcade-btn btn-purple" onclick="openSettings()">⚙️ CONTROLS</button>
-          <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red" style="text-decoration:none;">▶️ @THEGOVINDGUPTA</a>
-          </div>
-          </div>
+
+          <!-- GARAGE SCREEN -->
           <div id="garageScreen" class="screen" style="display:none;">
-          <div class="flex items-center justify-between w-full max-w-4xl mb-2">
-          <button class="arcade-btn" style="padding:6px 16px;" onclick="closeGarage()">◀ BACK</button>
-          <div class="title-animated" style="font-size:20px;">50 HYPERCARS & TRUCKS</div>
-          <div class="hud-card"><span class="text-emerald-400 font-black">🪙 <span id="garageCoins">1200</span></span></div>
+            <div class="flex items-center justify-between w-full max-w-4xl mb-2">
+              <button class="arcade-btn" style="padding:6px 16px;" onclick="closeGarage()">◀ BACK</button>
+              <div class="title-animated" style="font-size:20px;">50 HYPERCARS, F1 & TRUCKS</div>
+              <div class="hud-card"><span class="text-emerald-400 font-black">🪙 <span id="garageCoins">1200</span></span></div>
+            </div>
+            <div id="garageGrid" class="garage-grid"></div>
           </div>
-          <div id="garageGrid" class="garage-grid"></div>
-          </div>
+
+          <!-- SETTINGS SCREEN -->
           <div id="settingsScreen" class="screen" style="display:none;">
-          <div class="title-animated" style="font-size:24px; margin-bottom:12px;">F1 COCKPIT SETTINGS</div>
-          <div class="bg-slate-900/95 border-2 border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col gap-3">
-          <div class="flex justify-between items-center text-white font-bold text-sm"><span>🛞 STEERING MODE</span><button id="controlModeBtn" class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleControlMode()">F1 YOKE HANDLE</button></div>
-          <div class="flex justify-between items-center text-white font-bold text-sm"><span>🔊 ENGINE & MUSIC</span><button id="audioToggleBtn" class="arcade-btn btn-green" style="padding:6px 14px; font-size:11px;" onclick="toggleAudio()">ON</button></div>
-          <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red w-full justify-center" style="text-decoration:none;">📺 SUBSCRIBE @THEGOVINDGUPTA</a>
+            <div class="title-animated" style="font-size:24px; margin-bottom:12px;">F1 COCKPIT SETTINGS</div>
+            <div class="bg-slate-900/95 border-2 border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col gap-3">
+              <div class="flex justify-between items-center text-white font-bold text-sm"><span>🛞 STEERING MODE</span><button id="controlModeBtn" class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleControlMode()">F1 YOKE HANDLE</button></div>
+              <div class="flex justify-between items-center text-white font-bold text-sm"><span>🔊 ENGINE & MUSIC</span><button id="audioToggleBtn" class="arcade-btn btn-green" style="padding:6px 14px; font-size:11px;" onclick="toggleAudio()">ON</button></div>
+              <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red w-full justify-center" style="text-decoration:none;">📺 SUBSCRIBE @THEGOVINDGUPTA</a>
+            </div>
+            <button class="arcade-btn mt-4" onclick="closeSettings()">◀ BACK</button>
           </div>
-          <button class="arcade-btn mt-4" onclick="closeSettings()">◀ BACK</button>
-          </div>
+
+          <!-- HUD -->
           <div id="hudBar" class="hud-bar">
-          <div class="hud-cluster">
-          <button class="hud-exit-btn" onclick="backToHome()">◀ HOME</button>
-          <div class="hud-card"><span class="text-sky-400 font-black text-base" id="uiSpeed">0</span><span class="text-[10px] text-slate-400">KM/H</span><div class="w-12 h-2 bg-slate-800 rounded-full overflow-hidden"><div id="uiSpeedBar" class="h-full bg-sky-400" style="width:0%;"></div></div></div>
-          <div class="hud-card"><span class="text-[10px] text-slate-400">GEAR</span><span id="uiGear" class="text-amber-400 font-black text-base">1</span></div>
+            <div class="hud-cluster">
+              <button class="hud-exit-btn" onclick="backToHome()">◀ HOME</button>
+              <div class="hud-card"><span class="text-sky-400 font-black text-base" id="uiSpeed">0</span><span class="text-[10px] text-slate-400">KM/H</span><div class="w-12 h-2 bg-slate-800 rounded-full overflow-hidden"><div id="uiSpeedBar" class="h-full bg-sky-400" style="width:0%;"></div></div></div>
+              <div class="hud-card"><span class="text-[10px] text-slate-400">GEAR</span><span id="uiGear" class="text-amber-400 font-black text-base">1</span></div>
+            </div>
+            <div class="hud-cluster">
+              <div class="hud-card"><span class="text-[10px] text-slate-400">PASS</span><span id="uiOvertakes" class="text-purple-400 font-black text-base">0</span></div>
+              <div class="hud-card"><span id="uiDist" class="text-amber-300 font-black text-base">0</span><span class="text-[10px] text-slate-400">m</span></div>
+              <div class="hud-card">🪙 <span id="uiCoins" class="text-emerald-400 font-black text-base">1200</span></div>
+            </div>
           </div>
-          <div class="hud-cluster">
-          <div class="hud-card"><span class="text-[10px] text-slate-400">PASS</span><span id="uiOvertakes" class="text-purple-400 font-black text-base">0</span></div>
-          <div class="hud-card"><span id="uiDist" class="text-amber-300 font-black text-base">0</span><span class="text-[10px] text-slate-400">m</span></div>
-          <div class="hud-card">🪙 <span id="uiCoins" class="text-emerald-400 font-black text-base">1200</span></div>
-          </div>
-          </div>
+
+          <!-- GAMEPAD -->
           <div id="gamepad" class="gamepad">
-          <div class="pad-cluster">
-          <div id="steeringHandleWrap">
-          <svg id="steeringWheelSVG" viewBox="0 0 140 110" class="w-full h-full filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
-          <rect x="10" y="18" width="120" height="74" rx="18" fill="none" stroke="#0f172a" stroke-width="12"/>
-          <rect x="10" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
-          <rect x="112" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
-          <rect x="36" y="42" width="68" height="28" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-          <circle cx="55" cy="56" r="4" fill="#10b981"/><circle cx="70" cy="56" r="4" fill="#f59e0b"/><circle cx="85" cy="56" r="4" fill="#ef4444"/>
-          </svg>
+            <div class="pad-cluster">
+              <div id="steeringHandleWrap">
+                <svg id="steeringWheelSVG" viewBox="0 0 140 110" class="w-full h-full filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
+                  <rect x="10" y="18" width="120" height="74" rx="18" fill="none" stroke="#0f172a" stroke-width="12"/>
+                  <rect x="10" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
+                  <rect x="112" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
+                  <rect x="36" y="42" width="68" height="28" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+                  <circle cx="55" cy="56" r="4" fill="#10b981"/><circle cx="70" cy="56" r="4" fill="#f59e0b"/><circle cx="85" cy="56" r="4" fill="#ef4444"/>
+                </svg>
+              </div>
+              <div id="buttonSteerWrap" style="display:none; gap:12px;">
+                <div class="steer-btn" onpointerdown="setSteer(-1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">◀</div>
+                <div class="steer-btn" onpointerdown="setSteer(1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">▶</div>
+              </div>
+              <div id="hornBtnEl" class="horn-btn" onpointerdown="triggerCarHorn(true)" onpointerup="triggerCarHorn(false)">📢</div>
+            </div>
+            <div class="pad-cluster">
+              <div id="brakePedalEl" class="car-pedal pedal-brake-real" onpointerdown="setBrake(true)" onpointerup="setBrake(false)" onpointerleave="setBrake(false)"><div class="w-3 h-3 rounded-full bg-red-500"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
+              <div id="accelPedalEl" class="car-pedal pedal-accel" onpointerdown="setGas(true)" onpointerup="setGas(false)" onpointerleave="setGas(false)"><div class="w-3 h-3 rounded-full bg-emerald-400"></div><div class="pedal-grip"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
+            </div>
           </div>
-          <div id="buttonSteerWrap" style="display:none; gap:12px;">
-          <div class="steer-btn" onpointerdown="setSteer(-1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">◀</div>
-          <div class="steer-btn" onpointerdown="setSteer(1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">▶</div>
-          </div>
-          <div id="hornBtnEl" class="horn-btn" onpointerdown="triggerCarHorn(true)" onpointerup="triggerCarHorn(false)">📢</div>
-          </div>
-          <div class="pad-cluster">
-          <div id="brakePedalEl" class="car-pedal pedal-brake-real" onpointerdown="setBrake(true)" onpointerup="setBrake(false)" onpointerleave="setBrake(false)"><div class="w-3 h-3 rounded-full bg-red-500"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
-          <div id="accelPedalEl" class="car-pedal pedal-accel" onpointerdown="setGas(true)" onpointerup="setGas(false)" onpointerleave="setGas(false)"><div class="w-3 h-3 rounded-full bg-emerald-400"></div><div class="pedal-grip"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
-          </div>
-          </div>
+
+          <!-- GAME OVER -->
           <div id="gameOverScreen" class="screen" style="display:none;">
-          <div class="bg-slate-900/95 border-2 border-red-500 rounded-3xl p-6 max-w-md w-full text-center flex flex-col items-center shadow-2xl">
-          <div class="text-4xl mb-1 animate-bounce">💥</div>
-          <div class="title-animated" style="color:#ef4444; font-size:28px;">HIGHWAY CRASH!</div>
-          <div class="text-slate-300 text-xs font-bold my-2 bg-slate-950 px-3 py-1.5 rounded-xl">🏁 DIST: <span id="crashDistText" class="text-amber-400">0m</span> • 🏎️ PASSES: <span id="crashOvertakeText" class="text-purple-400">0</span></div>
-          <button class="arcade-btn btn-purple w-full my-2" onclick="watchAdToRevive()">🎬 WATCH AD & REVIVE</button>
-          <div class="flex gap-3 w-full mt-2">
-          <button class="arcade-btn btn-green flex-1" onclick="startGameSession()">🔄 RETRY</button>
-          <button class="arcade-btn flex-1" onclick="backToHome()">🏠 HOME</button>
+            <div class="bg-slate-900/95 border-2 border-red-500 rounded-3xl p-6 max-w-md w-full text-center flex flex-col items-center shadow-2xl">
+              <div class="text-4xl mb-1 animate-bounce">💥</div>
+              <div class="title-animated" style="color:#ef4444; font-size:28px;">HIGHWAY CRASH!</div>
+              <div class="text-slate-300 text-xs font-bold my-2 bg-slate-950 px-3 py-1.5 rounded-xl">🏁 DIST: <span id="crashDistText" class="text-amber-400">0m</span> • 🏎️ PASSES: <span id="crashOvertakeText" class="text-purple-400">0</span></div>
+              <button class="arcade-btn btn-purple w-full my-2" onclick="watchAdToRevive()">🎬 WATCH AD & REVIVE</button>
+              <div class="flex gap-3 w-full mt-2">
+                <button class="arcade-btn btn-green flex-1" onclick="startGameSession()">🔄 RETRY</button>
+                <button class="arcade-btn flex-1" onclick="backToHome()">🏠 HOME</button>
+              </div>
+            </div>
           </div>
-          </div>
-          </div>
+
+          <!-- AD MODAL -->
           <div id="customModal">
-          <div class="bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl text-center max-w-sm w-full shadow-2xl">
-          <div id="modalTitle" class="text-amber-400 font-black text-lg mb-2">SPONSORED REWARD AD</div>
-          <div id="modalMsg" class="text-slate-300 text-xs mb-3">Loading AdMob Rewarded Ad from Google SDK...</div>
-          <div class="flex gap-3 justify-center mt-3">
-          <button id="modalCloseBtn" class="arcade-btn btn-red" onclick="closeModal()">✖ CLOSE</button>
+            <div class="bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl text-center max-w-sm w-full shadow-2xl">
+              <div id="modalTitle" class="text-amber-400 font-black text-lg mb-2">SPONSORED REWARD AD</div>
+              <div id="modalMsg" class="text-slate-300 text-xs mb-3">Loading AdMob Rewarded Ad...</div>
+              <div class="flex gap-3 justify-center mt-3">
+                <button id="modalCloseBtn" class="arcade-btn btn-red" onclick="closeModal()">✖ CLOSE</button>
+              </div>
+            </div>
           </div>
           </div>
-          </div>
-          </div>
+
           <script>
           const canvas = document.getElementById('gameCanvas');
           const ctx = canvas.getContext('2d');
-          let coins = parseInt(localStorage.getItem('apex_coins_v5') || '1200');
-          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v5') || '0');
-          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v5') || '[0]');
+          let coins = parseInt(localStorage.getItem('apex_coins_v6') || '1200');
+          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v6') || '0');
+          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v6') || '[0]');
           let audioEnabled = true;
           let controlMode = 'handle';
           let isRunning = false;
@@ -437,40 +520,58 @@ jobs:
           let brakePressed = false;
           let lanePositions = [420, 565, 715, 860];
           let trafficCars = [];
+          let sceneryItems = [];
           let hornWaves = [];
           let weatherParticles = [];
           let lightningAlpha = 0;
+
           const worldThemes = [
-            { id: 'desert', name: 'SAHARA DESERT', ground1: '#d97706', ground2: '#f59e0b', road: '#1e293b', shoulder: '#78350f' },
-            { id: 'jungle', name: 'AMAZON JUNGLE', ground1: '#14532d', ground2: '#166534', road: '#1e293b', shoulder: '#3f6212' },
-            { id: 'city', name: 'CYBER NIGHT CITY', ground1: '#090d16', ground2: '#1e1b4b', road: '#0f172a', shoulder: '#38bdf8' },
-            { id: 'snow', name: 'HIMALAYA SNOW', ground1: '#cbd5e1', ground2: '#f8fafc', road: '#334155', shoulder: '#94a3b8' }
+            { id: 'desert', name: 'SAHARA DESERT', ground1: '#d97706', ground2: '#b45309', patch: '#f59e0b', road: '#1e293b', shoulder: '#92400e', kerb1: '#ef4444', kerb2: '#fef08a' },
+            { id: 'jungle', name: 'AMAZON JUNGLE', ground1: '#15803d', ground2: '#14532d', patch: '#22c55e', road: '#1e293b', shoulder: '#3f6212', kerb1: '#ef4444', kerb2: '#f8fafc' },
+            { id: 'city', name: 'CYBER CITY', ground1: '#090d16', ground2: '#1e1b4b', patch: '#312e81', road: '#0f172a', shoulder: '#0284c7', kerb1: '#38bdf8', kerb2: '#f43f5e' },
+            { id: 'snow', name: 'HIMALAYA SNOW', ground1: '#e2e8f0', ground2: '#cbd5e1', patch: '#f8fafc', road: '#334155', shoulder: '#64748b', kerb1: '#ef4444', kerb2: '#ffffff' }
           ];
           let currentThemeIdx = 0;
           const weatherMoods = ['SUNNY DAY', 'MIDNIGHT', 'HEAVY RAIN', 'THUNDER STORM'];
           let currentMoodIdx = 0;
+
           const vehicleCategories = [
-            { typeId: 0, className: 'MINI HATCH', prefix: 'Mini Cooper S', scaleW: 0.85, scaleH: 0.8 },
-            { typeId: 1, className: 'FORD MUSCLE', prefix: 'Mustang GT', scaleW: 1.0, scaleH: 1.0 },
-            { typeId: 2, className: 'F1 HYPERCAR', prefix: 'RedBull RB20', scaleW: 1.02, scaleH: 1.04 },
+            { typeId: 2, className: 'F1 HYPERCAR', prefix: 'RedBull RB20', scaleW: 1.04, scaleH: 1.06 },
+            { typeId: 1, className: 'GT SUPERCAR', prefix: 'Ferrari GT', scaleW: 1.0, scaleH: 1.02 },
+            { typeId: 0, className: 'STREET TURBO', prefix: 'Porsche 911', scaleW: 0.94, scaleH: 0.94 },
             { typeId: 3, className: 'RAPTOR PICKUP', prefix: 'Ford F-150', scaleW: 1.08, scaleH: 1.12 },
-            { typeId: 4, className: 'MONSTER SUV', prefix: 'Defender 4x4', scaleW: 1.1, scaleH: 1.06 },
-            { typeId: 5, className: 'JUMBO TRUCK', prefix: 'Titan Semi', scaleW: 1.24, scaleH: 1.36 }
+            { typeId: 4, className: 'MONSTER SUV', prefix: 'G-Wagon 4x4', scaleW: 1.1, scaleH: 1.08 },
+            { typeId: 5, className: 'HEAVY RIG', prefix: 'Titan Semi', scaleW: 1.2, scaleH: 1.32 }
           ];
+
           const carPalettes = [
-            { body: '#ef4444', stripe: '#fde047', accent: '#991b1b' },
-            { body: '#0284c7', stripe: '#ffffff', accent: '#0c4a6e' },
-            { body: '#10b981', stripe: '#064e3b', accent: '#047857' },
-            { body: '#f59e0b', stripe: '#0f172a', accent: '#b45309' },
-            { body: '#8b5cf6', stripe: '#ddd6fe', accent: '#4c1d95' },
-            { body: '#ec4899', stripe: '#fbcfe8', accent: '#831843' }
+            { body: '#1e1b4b', stripe: '#facc15', accent: '#ef4444' },
+            { body: '#ef4444', stripe: '#ffffff', accent: '#7f1d1d' },
+            { body: '#0284c7', stripe: '#fde047', accent: '#0c4a6e' },
+            { body: '#10b981', stripe: '#ecfdf5', accent: '#064e3b' },
+            { body: '#f59e0b', stripe: '#0f172a', accent: '#78350f' },
+            { body: '#8b5cf6', stripe: '#f3e8ff', accent: '#4c1d95' }
           ];
+
           let carsData = [];
           for (let i = 0; i < 50; i++) {
             let pal = carPalettes[i % carPalettes.length];
             let cat = vehicleCategories[i % vehicleCategories.length];
-            carsData.push({ id: i, name: cat.prefix + ' #' + (i + 1), categoryLabel: cat.className, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, topSpeed: 205 + i * 3, accel: 1.25 + i * 0.025, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, price: i === 0 ? 0 : i * 350 });
+            carsData.push({ id: i, name: cat.prefix + ' #' + (i + 1), categoryLabel: cat.className, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, topSpeed: 210 + i * 3, accel: 1.3 + i * 0.025, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, price: i === 0 ? 0 : i * 350 });
           }
+
+          // Generate Natural Roadside Scenery Objects
+          function initScenery() {
+            sceneryItems = [];
+            for (let i = 0; i < 36; i++) {
+              let isLeft = (i % 2 === 0);
+              let x = isLeft ? (35 + Math.random() * 245) : (1000 + Math.random() * 245);
+              let wy = -i * 95;
+              sceneryItems.push({ x: x, worldY: wy, size: 22 + Math.random() * 22, variant: i % 3 });
+            }
+          }
+          initScenery();
+
           let audioCtx = null, engineOsc = null, engineGain = null, musicTimer = null, musicStep = 0;
           function ensureAudio() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -540,25 +641,62 @@ jobs:
           }
           function stopHomeMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
           window.addEventListener('pointerdown', () => { ensureAudio(); if (!isRunning && !musicTimer) startHomeMusic(); }, { once: true });
+
+          // Clean, Sharp HD SVG Car Preview
           function createCarSVG(car, w = 72, h = 110) {
-            return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 80 140\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"10\" y=\"10\" width=\"60\" height=\"120\" rx=\"18\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2.5\"/><rect x=\"32\" y=\"10\" width=\"16\" height=\"120\" fill=\"' + car.stripeColor + '\" opacity=\"0.9\"/><rect x=\"16\" y=\"44\" width=\"48\" height=\"52\" rx=\"10\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/><rect x=\"12\" y=\"12\" width=\"12\" height=\"5\" rx=\"2\" fill=\"#fef08a\"/><rect x=\"56\" y=\"12\" width=\"12\" height=\"5\" rx=\"2\" fill=\"#fef08a\"/><rect x=\"14\" y=\"123\" width=\"14\" height=\"4\" rx=\"1\" fill=\"#ef4444\"/><rect x=\"52\" y=\"123\" width=\"14\" height=\"4\" rx=\"1\" fill=\"#ef4444\"/></svg>';
+            if (car.bodyStyle === 2) {
+              // F1 Open-Wheel Hypercar SVG
+              return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 90 150\" xmlns=\"http://www.w3.org/2000/svg\">' +
+                '<rect x=\"6\" y=\"26\" width=\"16\" height=\"30\" rx=\"5\" fill=\"#090d16\" stroke=\"#facc15\" stroke-width=\"1.5\"/>' +
+                '<rect x=\"68\" y=\"26\" width=\"16\" height=\"30\" rx=\"5\" fill=\"#090d16\" stroke=\"#facc15\" stroke-width=\"1.5\"/>' +
+                '<rect x=\"6\" y=\"98\" width=\"18\" height=\"34\" rx=\"5\" fill=\"#090d16\" stroke=\"#ef4444\" stroke-width=\"1.5\"/>' +
+                '<rect x=\"66\" y=\"98\" width=\"18\" height=\"34\" rx=\"5\" fill=\"#090d16\" stroke=\"#ef4444\" stroke-width=\"1.5\"/>' +
+                '<path d=\"M14 18 L76 18 L70 28 L20 28 Z\" fill=\"' + car.accentColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"1.5\"/>' +
+                '<path d=\"M36 16 L54 16 L64 62 L66 116 L24 116 L26 62 Z\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2\"/>' +
+                '<path d=\"M40 16 L50 16 L48 56 L42 56 Z\" fill=\"' + car.stripeColor + '\"/>' +
+                '<ellipse cx=\"45\" cy=\"76\" rx=\"11\" ry=\"18\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/>' +
+                '<circle cx=\"45\" cy=\"78\" r=\"6\" fill=\"#facc15\"/>' +
+                '<rect x=\"18\" y=\"122\" width=\"54\" height=\"14\" rx=\"4\" fill=\"' + car.accentColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"1.5\"/>' +
+              '</svg>';
+            }
+            // Sleek GT / Supercar SVG
+            return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 90 150\" xmlns=\"http://www.w3.org/2000/svg\">' +
+              '<rect x=\"8\" y=\"28\" width=\"10\" height=\"26\" rx=\"4\" fill=\"#090d16\"/>' +
+              '<rect x=\"72\" y=\"28\" width=\"10\" height=\"26\" rx=\"4\" fill=\"#090d16\"/>' +
+              '<rect x=\"8\" y=\"98\" width=\"10\" height=\"28\" rx=\"4\" fill=\"#090d16\"/>' +
+              '<rect x=\"72\" y=\"98\" width=\"10\" height=\"28\" rx=\"4\" fill=\"#090d16\"/>' +
+              '<path d=\"M22 14 Q45 8 68 14 L74 38 L74 124 Q45 132 16 124 L16 38 Z\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2.5\"/>' +
+              '<rect x=\"39\" y=\"12\" width=\"12\" height=\"116\" fill=\"' + car.stripeColor + '\" opacity=\"0.9\"/>' +
+              '<path d=\"M24 46 Q45 38 66 46 L62 96 Q45 102 28 96 Z\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/>' +
+              '<rect x=\"20\" y=\"16\" width=\"12\" height=\"6\" rx=\"3\" fill=\"#fef08a\"/>' +
+              '<rect x=\"58\" y=\"16\" width=\"12\" height=\"6\" rx=\"3\" fill=\"#fef08a\"/>' +
+              '<rect x=\"18\" y=\"118\" width=\"54\" height=\"6\" rx=\"2\" fill=\"' + car.accentColor + '\"/>' +
+              '<rect x=\"20\" y=\"123\" width=\"14\" height=\"4\" rx=\"2\" fill=\"#ef4444\"/>' +
+              '<rect x=\"56\" y=\"123\" width=\"14\" height=\"4\" rx=\"2\" fill=\"#ef4444\"/>' +
+            '</svg>';
           }
+
           function updateGlobalUI() {
             document.getElementById('uiCoins').innerText = coins;
             document.getElementById('garageCoins').innerText = coins;
-            document.getElementById('homeCarPreview').innerHTML = createCarSVG(carsData[activeCarIndex], 90, 130);
-            localStorage.setItem('apex_coins_v5', coins);
-            localStorage.setItem('apex_car_v5', activeCarIndex);
-            localStorage.setItem('apex_unlocked_v5', JSON.stringify(unlockedCars));
+            document.getElementById('homeCarPreview').innerHTML = createCarSVG(carsData[activeCarIndex], 84, 126);
+            localStorage.setItem('apex_coins_v6', coins);
+            localStorage.setItem('apex_car_v6', activeCarIndex);
+            localStorage.setItem('apex_unlocked_v6', JSON.stringify(unlockedCars));
           }
-          window.cycleTheme = function() {
-            currentThemeIdx = (currentThemeIdx + 1) % worldThemes.length;
-            document.getElementById('homeThemeLabel').innerText = worldThemes[currentThemeIdx].name;
+
+          window.selectTheme = function(idx) {
+            currentThemeIdx = idx;
+            const btns = document.querySelectorAll('#themeButtonsWrap .choice-chip');
+            btns.forEach((b, i) => b.classList.toggle('active-theme', i === idx));
           };
-          window.cycleMood = function() {
-            currentMoodIdx = (currentMoodIdx + 1) % weatherMoods.length;
-            document.getElementById('homeMoodLabel').innerText = weatherMoods[currentMoodIdx];
+
+          window.selectMood = function(idx) {
+            currentMoodIdx = idx;
+            const btns = document.querySelectorAll('#moodButtonsWrap .choice-chip');
+            btns.forEach((b, i) => b.classList.toggle('active-mood', i === idx));
           };
+
           window.triggerCarHorn = function(pressed) {
             if (!pressed) return;
             hornWaves.push({ x: playerX, y: playerWorldY - 45, radius: 16, alpha: 1.0 });
@@ -584,25 +722,21 @@ jobs:
               }
             });
           };
+
           function getPlayerClosestLane() {
             let best = 0, minD = 9999;
             lanePositions.forEach((lx, idx) => { let d = Math.abs(playerX - lx); if (d < minD) { minD = d; best = idx; } });
             return best;
           }
-          function isSlotFree(lane, wy, ignoreIdx = -1) {
-            for (let i = 0; i < trafficCars.length; i++) {
-              if (i === ignoreIdx) continue;
-              if (trafficCars[i].lane === lane && Math.abs(trafficCars[i].worldY - wy) < 210) return false;
-            }
-            return true;
-          }
+
           function createTrafficVehicle(lane, worldY, forceDirectX = false) {
             let pal = carPalettes[Math.floor(Math.random() * carPalettes.length)];
             let cat = vehicleCategories[Math.floor(Math.random() * vehicleCategories.length)];
             let spd = cat.typeId === 5 ? (32 + Math.random() * 16) : (42 + Math.random() * 28);
             let startX = forceDirectX ? playerX : lanePositions[lane];
-            return { lane, x: startX, targetX: startX, worldY, speed: spd, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, changeCooldown: 120 + Math.floor(Math.random() * 140) };
+            return { lane, x: startX, targetX: startX, worldY, speed: spd, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH };
           }
+
           function spawnTrafficAhead() {
             trafficCars = [];
             let pLane = getPlayerClosestLane();
@@ -612,6 +746,7 @@ jobs:
               trafficCars.push(createTrafficVehicle(lane, wy, i === 0));
             }
           }
+
           window.startGameSession = function() {
             stopHomeMusic();
             startEngineAudio();
@@ -623,8 +758,10 @@ jobs:
             playerWorldY = 0; totalDistanceMeters = 0; overtakeCount = 0; speed = 0; gear = 1;
             setGas(false); setBrake(false);
             spawnTrafficAhead();
+            initScenery();
             isRunning = true;
           };
+
           window.backToHome = function() {
             isRunning = false;
             updateEngineAudio();
@@ -636,6 +773,7 @@ jobs:
             updateGlobalUI();
             if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
           };
+
           window.openGarage = function() {
             document.getElementById('homeScreen').style.display = 'none';
             document.getElementById('garageScreen').style.display = 'flex';
@@ -654,6 +792,7 @@ jobs:
             document.getElementById('settingsScreen').style.display = 'none';
             document.getElementById('homeScreen').style.display = 'flex';
           };
+
           function renderGarageGrid() {
             const grid = document.getElementById('garageGrid');
             grid.innerHTML = '';
@@ -666,11 +805,13 @@ jobs:
               grid.appendChild(d);
             });
           }
+
           window.selectCar = function(id) { activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); };
           window.unlockWithCoins = function(id) {
             if (coins >= carsData[id].price) { coins -= carsData[id].price; unlockedCars.push(id); activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); }
             else window.unlockWithAd(id);
           };
+
           let adPurpose = null, pendingUnlockCarId = null;
           window.unlockWithAd = function(id) { adPurpose = 'unlock'; pendingUnlockCarId = id; showRealAdModal('UNLOCK ' + carsData[id].name); };
           window.watchAdToRevive = function() { adPurpose = 'revive'; showRealAdModal('REVIVE & CONTINUE'); };
@@ -678,12 +819,12 @@ jobs:
           function showRealAdModal(title) {
             document.getElementById('customModal').style.display = 'flex';
             document.getElementById('modalTitle').innerText = title;
-            document.getElementById('modalMsg').innerText = 'Requesting AdMob Rewarded Ad from Google SDK...';
+            document.getElementById('modalMsg').innerText = 'Opening Google AdMob Rewarded Video... Complete the ad to receive your reward.';
             if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showRewarded'); } catch (e) {} }
           }
           
           window.onAdNotLoaded = function() {
-            document.getElementById('modalMsg').innerText = 'Ad not loaded yet! Please try again in a moment when ad is ready.';
+            document.getElementById('modalMsg').innerText = 'Ad abhi load ho raha hai! Kripya 2-3 second baad dobara click karein. Bina ad dekhe reward nahi milega.';
           };
 
           window.onRewardedAdReward = function() {
@@ -699,6 +840,7 @@ jobs:
               speed = 70; isRunning = true;
             }
           };
+
           window.closeModal = function() { document.getElementById('customModal').style.display = 'none'; };
           window.toggleAudio = function() {
             audioEnabled = !audioEnabled;
@@ -711,9 +853,11 @@ jobs:
             document.getElementById('steeringHandleWrap').style.display = controlMode === 'handle' ? 'flex' : 'none';
             document.getElementById('buttonSteerWrap').style.display = controlMode === 'buttons' ? 'flex' : 'none';
           };
+
           window.setSteer = function(d) { steerInput = d; };
           window.setGas = function(v) { gasPressed = v; ensureAudio(); startEngineAudio(); document.getElementById('accelPedalEl').classList.toggle('pressed', v); };
           window.setBrake = function(v) { brakePressed = v; document.getElementById('brakePedalEl').classList.toggle('pressed', v); };
+
           const handleWrap = document.getElementById('steeringHandleWrap');
           const wheelSVG = document.getElementById('steeringWheelSVG');
           let draggingWheel = false;
@@ -728,27 +872,150 @@ jobs:
           });
           const relWheel = () => { draggingWheel = false; wheelSVG.style.transform = 'rotate(0deg)'; steerInput = 0; };
           handleWrap.addEventListener('pointerup', relWheel); handleWrap.addEventListener('pointercancel', relWheel);
+
           for (let i = 0; i < 65; i++) weatherParticles.push({ x: Math.random() * 1280, y: Math.random() * 720, len: 18 + Math.random() * 18, vy: 14 + Math.random() * 8 });
           spawnTrafficAhead();
-          function drawVehicle(sx, sy, v, isPlayer, tilt) {
-            ctx.save(); ctx.translate(sx, sy); ctx.rotate(tilt); ctx.scale(v.scaleW || 1, v.scaleH || 1);
-            if (currentMoodIdx >= 1) {
-              let g = ctx.createLinearGradient(0, -60, 0, -240);
-              g.addColorStop(0, 'rgba(254, 240, 138, 0.45)'); g.addColorStop(1, 'rgba(254, 240, 138, 0)');
-              ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-22, -60); ctx.lineTo(-70, -240); ctx.lineTo(70, -240); ctx.lineTo(22, -60); ctx.fill();
+
+          // Draw Natural Scenery (Trees, Palms, Cacti, Snow Pines, Rocks)
+          function drawSceneryObject(item, sy) {
+            ctx.save();
+            ctx.translate(item.x, sy);
+            // Soft ground shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.28)';
+            ctx.beginPath(); ctx.ellipse(4, 6, item.size * 0.85, item.size * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+
+            if (currentThemeIdx === 0) {
+              // Sahara Desert: Dunes, Rocks & Palm/Cactus
+              if (item.variant === 0) {
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(-5, -item.size, 10, item.size * 1.4);
+                ctx.fillRect(-16, -item.size * 0.6, 12, 7);
+                ctx.fillRect(-16, -item.size * 0.9, 7, 14);
+                ctx.fillRect(5, -item.size * 0.4, 11, 7);
+              } else {
+                ctx.fillStyle = '#78350f';
+                ctx.beginPath(); ctx.arc(0, 0, item.size * 0.7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#92400e';
+                ctx.beginPath(); ctx.arc(-4, -4, item.size * 0.45, 0, Math.PI * 2); ctx.fill();
+              }
+            } else if (currentThemeIdx === 1) {
+              // Amazon Jungle: Multi-layered lush green trees & bushes
+              ctx.fillStyle = '#14532d';
+              ctx.beginPath(); ctx.arc(0, 0, item.size, 0, Math.PI * 2); ctx.fill();
+              ctx.fillStyle = '#16a34a';
+              ctx.beginPath(); ctx.arc(-5, -5, item.size * 0.75, 0, Math.PI * 2); ctx.fill();
+              ctx.fillStyle = '#4ade80';
+              ctx.beginPath(); ctx.arc(-8, -8, item.size * 0.4, 0, Math.PI * 2); ctx.fill();
+            } else if (currentThemeIdx === 2) {
+              // Cyber Night City: Neon Towers & Glowing Streetlights
+              ctx.fillStyle = '#0f172a';
+              ctx.fillRect(-item.size * 0.7, -item.size * 0.7, item.size * 1.4, item.size * 1.4);
+              ctx.strokeStyle = item.variant === 0 ? '#38bdf8' : '#f43f5e';
+              ctx.lineWidth = 3;
+              ctx.strokeRect(-item.size * 0.7, -item.size * 0.7, item.size * 1.4, item.size * 1.4);
+            } else {
+              // Himalaya Snow: Snow-capped Pine Trees & Icy Boulders
+              ctx.fillStyle = '#1e293b';
+              ctx.beginPath(); ctx.arc(0, 0, item.size * 0.85, 0, Math.PI * 2); ctx.fill();
+              ctx.fillStyle = '#f8fafc';
+              ctx.beginPath(); ctx.arc(-3, -3, item.size * 0.6, 0, Math.PI * 2); ctx.fill();
             }
-            ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(-32, -64, 64, 128);
-            ctx.fillStyle = '#090d16';
-            ctx.fillRect(-36, -46, 9, 24); ctx.fillRect(27, -46, 9, 24);
-            ctx.fillRect(-36, 20, 9, 24); ctx.fillRect(27, 20, 9, 24);
-            ctx.fillStyle = v.bodyColor; ctx.fillRect(-28, -62, 56, 124);
-            ctx.fillStyle = v.stripeColor; ctx.fillRect(-6, -62, 12, 124);
-            ctx.fillStyle = '#0f172a'; ctx.fillRect(-20, -26, 40, 46);
-            ctx.fillStyle = '#fef08a'; ctx.fillRect(-24, -64, 10, 4); ctx.fillRect(14, -64, 10, 4);
-            ctx.fillStyle = (isPlayer && brakePressed) ? '#ff0000' : '#ef4444';
-            ctx.fillRect(-24, 58, 12, 4); ctx.fillRect(12, 58, 12, 4);
             ctx.restore();
           }
+
+          // Clean, High-Detail Vehicle Canvas Renderer
+          function drawVehicle(sx, sy, v, isPlayer, tilt) {
+            ctx.save(); ctx.translate(sx, sy); ctx.rotate(tilt); ctx.scale(v.scaleW || 1, v.scaleH || 1);
+
+            // Night/Storm Headlight Beams
+            if (currentMoodIdx >= 1) {
+              let g = ctx.createLinearGradient(0, -60, 0, -240);
+              g.addColorStop(0, 'rgba(254, 240, 138, 0.48)'); g.addColorStop(1, 'rgba(254, 240, 138, 0)');
+              ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-22, -60); ctx.lineTo(-68, -240); ctx.lineTo(68, -240); ctx.lineTo(22, -60); ctx.fill();
+            }
+
+            // Drop Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.beginPath(); ctx.roundRect(-32, -62, 64, 128, 16); ctx.fill();
+
+            if (v.bodyStyle === 2) {
+              // F1 OPEN-WHEEL HYPERCAR
+              ctx.fillStyle = '#090d16';
+              ctx.beginPath();
+              ctx.roundRect(-36, -48, 12, 26, 4); ctx.roundRect(24, -48, 12, 26, 4);
+              ctx.roundRect(-37, 22, 13, 28, 4); ctx.roundRect(24, 22, 13, 28, 4);
+              ctx.fill();
+
+              // Front Wing
+              ctx.fillStyle = v.accentColor;
+              ctx.beginPath(); ctx.roundRect(-32, -64, 64, 11, 4); ctx.fill();
+
+              // Sculpted F1 Body & Sidepods
+              ctx.fillStyle = v.bodyColor;
+              ctx.beginPath();
+              ctx.moveTo(-8, -64); ctx.lineTo(8, -64);
+              ctx.lineTo(24, -15); ctx.lineTo(22, 52);
+              ctx.lineTo(-22, 52); ctx.lineTo(-24, -15);
+              ctx.closePath(); ctx.fill();
+
+              // Center Nose Stripe
+              ctx.fillStyle = v.stripeColor;
+              ctx.fillRect(-5, -60, 10, 110);
+
+              // Cockpit & Driver Helmet
+              ctx.fillStyle = '#0f172a';
+              ctx.beginPath(); ctx.ellipse(0, 4, 10, 18, 0, 0, Math.PI * 2); ctx.fill();
+              ctx.fillStyle = '#facc15';
+              ctx.beginPath(); ctx.arc(0, 6, 6, 0, Math.PI * 2); ctx.fill();
+
+              // Rear Wing
+              ctx.fillStyle = v.accentColor;
+              ctx.beginPath(); ctx.roundRect(-28, 48, 56, 12, 3); ctx.fill();
+            } else {
+              // SLEEK GT SUPERCAR / SUV / TRUCK
+              ctx.fillStyle = '#090d16';
+              ctx.beginPath();
+              ctx.roundRect(-34, -44, 8, 22, 3); ctx.roundRect(26, -44, 8, 22, 3);
+              ctx.roundRect(-34, 20, 8, 22, 3); ctx.roundRect(26, 20, 8, 22, 3);
+              ctx.fill();
+
+              // Aerodynamic Body
+              ctx.fillStyle = v.bodyColor;
+              ctx.beginPath(); ctx.roundRect(-28, -62, 56, 124, 16); ctx.fill();
+              ctx.strokeStyle = v.stripeColor; ctx.lineWidth = 2;
+              ctx.stroke();
+
+              // Twin Racing Stripe
+              ctx.fillStyle = v.stripeColor;
+              ctx.fillRect(-7, -60, 5, 120);
+              ctx.fillRect(2, -60, 5, 120);
+
+              // Tinted Windshield & Cabin Glass
+              ctx.fillStyle = '#0f172a';
+              ctx.beginPath(); ctx.roundRect(-21, -28, 42, 54, 10); ctx.fill();
+              ctx.fillStyle = v.bodyColor;
+              ctx.beginPath(); ctx.roundRect(-16, -10, 32, 24, 6); ctx.fill();
+
+              // Rear Spoiler
+              ctx.fillStyle = v.accentColor;
+              ctx.beginPath(); ctx.roundRect(-26, 52, 52, 6, 2); ctx.fill();
+            }
+
+            // LED Headlights & Brake Lights
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-22, -62, 10, 4); ctx.fillRect(12, -62, 10, 4);
+            ctx.fillStyle = (isPlayer && brakePressed) ? '#ff0000' : '#ef4444';
+            ctx.fillRect(-22, 58, 12, 4); ctx.fillRect(10, 58, 12, 4);
+
+            // Nitro / Exhaust Flame when accelerating
+            if (isPlayer && gasPressed && speed > 80) {
+              ctx.fillStyle = '#38bdf8';
+              ctx.beginPath(); ctx.arc(-8, 66 + Math.random() * 6, 4, 0, Math.PI * 2); ctx.fill();
+              ctx.beginPath(); ctx.arc(8, 66 + Math.random() * 6, 4, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+          }
+
           function masterLoop() {
             const activeCar = carsData[activeCarIndex];
             const theme = worldThemes[currentThemeIdx];
@@ -768,28 +1035,64 @@ jobs:
             updateEngineAudio();
             let playerScreenY = 555 - (gasPressed ? Math.min(80, speed * 0.28) : 20);
             cameraWorldY = playerWorldY - playerScreenY;
+
+            // 1. Natural Terrain Base
             ctx.fillStyle = theme.ground1; ctx.fillRect(0, 0, 1280, 720);
-            ctx.fillStyle = theme.shoulder; ctx.fillRect(325, 0, 630, 720);
-            ctx.fillStyle = theme.road; ctx.fillRect(350, 0, 580, 720);
-            ctx.fillStyle = '#fde047';
-            let dashStart = Math.floor(cameraWorldY / 90) * 90;
-            for (let wy = dashStart; wy < cameraWorldY + 810; wy += 90) {
+
+            // Natural Ground Patches (Dunes / Grass / Snowdrifts)
+            ctx.fillStyle = theme.ground2;
+            let patchStart = Math.floor(cameraWorldY / 180) * 180;
+            for (let wy = patchStart; wy < cameraWorldY + 900; wy += 180) {
               let sy = wy - cameraWorldY;
-              ctx.fillRect(492, sy, 6, 48); ctx.fillRect(637, sy, 6, 48); ctx.fillRect(782, sy, 6, 48);
+              ctx.beginPath(); ctx.ellipse(150, sy, 140, 55, 0, 0, Math.PI * 2); ctx.fill();
+              ctx.beginPath(); ctx.ellipse(1130, sy + 90, 140, 55, 0, 0, Math.PI * 2); ctx.fill();
             }
+
+            // 2. Highway Shoulder & Asphalt
+            ctx.fillStyle = theme.shoulder; ctx.fillRect(322, 0, 636, 720);
+            ctx.fillStyle = theme.road; ctx.fillRect(350, 0, 580, 720);
+
+            // 3. Red & White F1 Rumble Kerbs + Lane Dividers
+            let dashStart = Math.floor(cameraWorldY / 80) * 80;
+            for (let wy = dashStart; wy < cameraWorldY + 800; wy += 80) {
+              let sy = wy - cameraWorldY;
+              // Left & Right Alternating Kerbs
+              ctx.fillStyle = theme.kerb1;
+              ctx.fillRect(336, sy, 14, 40); ctx.fillRect(930, sy, 14, 40);
+              ctx.fillStyle = theme.kerb2;
+              ctx.fillRect(336, sy + 40, 14, 40); ctx.fillRect(930, sy + 40, 14, 40);
+
+              // Highway Lane Markings
+              ctx.fillStyle = '#fde047';
+              ctx.fillRect(492, sy, 6, 42); ctx.fillRect(637, sy, 6, 42); ctx.fillRect(782, sy, 6, 42);
+            }
+
+            // 4. Render & Recycle Natural Roadside Scenery
+            for (let s = 0; s < sceneryItems.length; s++) {
+              let item = sceneryItems[s];
+              let sy = item.worldY - cameraWorldY;
+              if (sy > 820) {
+                item.worldY = cameraWorldY - 120 - Math.random() * 200;
+                item.x = (s % 2 === 0) ? (35 + Math.random() * 245) : (1000 + Math.random() * 245);
+              }
+              drawSceneryObject(item, item.worldY - cameraWorldY);
+            }
+
+            // 5. Render & Update Traffic Cars
             for (let i = 0; i < trafficCars.length; i++) {
               let t = trafficCars[i];
               t.worldY -= t.speed * 0.14;
+              if (t.targetX !== undefined) t.x += (t.targetX - t.x) * 0.1;
               let sy = t.worldY - cameraWorldY;
               if (sy > 860) {
                 if (isRunning) { coins += 25; overtakeCount++; }
                 let nl = Math.floor(Math.random() * 4);
                 let nwy = playerWorldY - 760 - Math.random() * 360;
-                trafficCars[i] = createTrafficVehicle(nl, nwy, true);
+                trafficCars[i] = createTrafficVehicle(nl, nwy, Math.random() < 0.5);
                 continue;
               }
-              drawVehicle(t.x, t.worldY - cameraWorldY, t, false, 0);
-              if (isRunning && Math.abs(playerX - t.x) < 46 && Math.abs(playerScreenY - (t.worldY - cameraWorldY)) < 96) {
+              drawVehicle(t.x, sy, t, false, 0);
+              if (isRunning && Math.abs(playerX - t.x) < 46 && Math.abs(playerScreenY - sy) < 96) {
                 isRunning = false; setGas(false); setBrake(false); playCrashSound(); updateGlobalUI();
                 document.getElementById('crashDistText').innerText = Math.floor(totalDistanceMeters) + 'm';
                 document.getElementById('crashOvertakeText').innerText = overtakeCount;
@@ -799,14 +1102,20 @@ jobs:
                 if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
               }
             }
+
+            // 6. Horn Soundwaves
             for (let h = hornWaves.length - 1; h >= 0; h--) {
               let hw = hornWaves[h]; hw.radius += 7; hw.alpha -= 0.04;
               ctx.strokeStyle = 'rgba(253, 224, 71, ' + hw.alpha + ')'; ctx.lineWidth = 4;
               ctx.beginPath(); ctx.arc(hw.x, hw.y - cameraWorldY, hw.radius, -Math.PI * 0.85, -Math.PI * 0.15); ctx.stroke();
               if (hw.alpha <= 0) hornWaves.splice(h, 1);
             }
+
+            // 7. Player Vehicle
             drawVehicle(playerX, playerScreenY, activeCar, true, steerInput * 0.12);
-            if (currentMoodIdx >= 1) { ctx.fillStyle = 'rgba(2, 6, 23, 0.45)'; ctx.fillRect(0, 0, 1280, 720); }
+
+            // 8. Weather Overlays
+            if (currentMoodIdx >= 1) { ctx.fillStyle = 'rgba(2, 6, 23, 0.42)'; ctx.fillRect(0, 0, 1280, 720); }
             if (currentMoodIdx >= 2) {
               ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)'; ctx.lineWidth = 2;
               weatherParticles.forEach(p => {
@@ -816,6 +1125,7 @@ jobs:
               if (currentMoodIdx === 3 && Math.random() < 0.012) lightningAlpha = 0.8;
               if (lightningAlpha > 0) { ctx.fillStyle = 'rgba(255,255,255,' + lightningAlpha + ')'; ctx.fillRect(0, 0, 1280, 720); lightningAlpha -= 0.08; }
             }
+
             if (isRunning) {
               document.getElementById('uiSpeed').innerText = Math.floor(speed);
               let speedBar = document.getElementById('uiSpeedBar');
