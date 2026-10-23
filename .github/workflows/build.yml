@@ -17,112 +17,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
+      - name: Install Android SDK manually
         run: |
+          sudo apt-get update
+          sudo apt-get install -y android-sdk
+          echo "ANDROID_HOME=/usr/lib/android-sdk" >> "$GITHUB_ENV"
+          echo "/usr/lib/android-sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Create Android SDK configuration
+        run: |
+          sdkmanager --version || true
+          yes | sdkmanager --licenses || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Create Android project
         run: |
-          mkdir -p app/src/main/assets app/src/main/java/com/game/apex
-          cat > settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.name = "GameAPK"
-          include(":app")
-          EOF
+          if [ ! -f index.html ]; then
+            echo "ERROR: index.html not found in repository root"
+            exit 1
+          fi
 
-          cat > build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.6.1' apply false
-          }
-          EOF
+          mkdir -p app/src/main/assets
+          cp index.html app/src/main/assets/index.html
 
-          cat > app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-          android {
-              namespace 'com.game.apex'
-              compileSdk 35
-              defaultConfig {
-                  applicationId 'com.game.apex'
-                  minSdk 23
-                  targetSdk 28
-                  versionCode 1
-                  versionName '1.0'
-              }
-          }
-          EOF
-
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  android:label="Game" android:usesCleartextTraffic="true">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-          cat > app/src/main/java/com/game/apex/MainActivity.java <<'EOF'
-          package com.game.apex;
-
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.webkit.WebView;
-          import android.webkit.WebSettings;
-
-          public class MainActivity extends Activity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  WebView web = new WebView(this);
-                  WebSettings settings = web.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  web.setWebChromeClient(new android.webkit.WebChromeClient());
-                  setContentView(web);
-                  web.loadUrl("file:///android_asset/index.html");
-              }
-          }
-          EOF
-
-          if [ -f index.html ]; then
-            cp index.html app/src/main/assets/index.html
-          else
-            echo "ERROR: index.html not found in repository root."
+          if [ ! -f settings.gradle ]; then
+            echo "ERROR: Android project files are missing. A complete Gradle project is required."
             exit 1
           fi
 
       - name: Build APK
         run: |
-          gradle wrapper --gradle-version 8.7
-          chmod +x gradlew
+          chmod +x ./gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
