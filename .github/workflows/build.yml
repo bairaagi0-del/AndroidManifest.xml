@@ -51,7 +51,7 @@ jobs:
       - name: Recreate Android Project Structure
         run: flutter create . --org com.rahulgupta --project-name speedracer
 
-      - name: Apply Uploaded Red Bull Car Emblem as Official Launcher Icon
+      - name: Apply Uploaded Red Bull PNG as Official Launcher Icon
         run: |
           pip install Pillow
           python3 -c "
@@ -59,15 +59,15 @@ jobs:
           from PIL import Image
 
           # Remove adaptive icon XML folder so Android uses our PNG icon directly
-          anydpi_dir = 'android/app/src/main/res/mipmap-anydpi-v26'
-          if os.path.exists(anydpi_dir):
-              shutil.rmtree(anydpi_dir, ignore_errors=True)
+          for adaptive_dir in glob.glob('android/app/src/main/res/mipmap-anydpi*'):
+              shutil.rmtree(adaptive_dir, ignore_errors=True)
 
-          # Search repository for the uploaded Red Bull Racing Speed Emblem image
+          # Search repository for the uploaded Red Bull PNG image
           candidates = []
           for ext in ('*.png', '*.jpg', '*.jpeg', '**/*.png', '**/*.jpg'):
               for f in glob.glob(ext, recursive=True):
-                  if 'android/' in f or 'build/' in f or 'ios/' in f or 'web/' in f:
+                  norm = f.replace('\\\\', '/')
+                  if any(skip in norm for skip in ['android/', 'build/', 'ios/', 'web/', 'linux/', 'macos/', 'windows/']):
                       continue
                   candidates.append(f)
 
@@ -80,7 +80,7 @@ jobs:
           if not source_img and candidates:
               source_img = candidates[0]
 
-          print(f'Selected Uploaded Icon File: {source_img}')
+          print(f'Using Uploaded Icon File: {source_img}')
 
           sizes = {
               'mipmap-mdpi': 48,
@@ -97,7 +97,7 @@ jobs:
                   img = img.resize((size, size), Image.Resampling.LANCZOS)
                   img.save(f'{d_path}/ic_launcher.png')
                   img.save(f'{d_path}/ic_launcher_round.png')
-          print('Launcher icons updated successfully!')
+          print('Red Bull PNG Launcher Icons generated successfully!')
           "
 
       - name: Fix Android Gradle Properties & Wrapper
@@ -116,7 +116,7 @@ jobs:
           zipStorePath=gradle/wrapper
           EOF
 
-      - name: Write Clean lib/main.dart with Active Banner & Preloaded Ads
+      - name: Write Clean lib/main.dart with Audio Unlock & Active AdMob
         run: |
           mkdir -p lib
           cat << 'EOF' > lib/main.dart
@@ -167,6 +167,13 @@ jobs:
               _controller = WebViewController()
                 ..setJavaScriptMode(JavaScriptMode.unrestricted)
                 ..setBackgroundColor(const Color(0xFF030712))
+                ..setNavigationDelegate(
+                  NavigationDelegate(
+                    onPageFinished: (String url) {
+                      _controller.runJavaScript('if(window.unlockAndStartAudio) window.unlockAndStartAudio();');
+                    },
+                  ),
+                )
                 ..addJavaScriptChannel(
                   'AdMobBridge',
                   onMessageReceived: (JavaScriptMessage message) {
@@ -312,8 +319,8 @@ jobs:
                                 child: AdWidget(ad: _bannerAd!),
                               )
                             : const Text(
-                                'SPONSORED • AD LOADING...',
-                                style: TextStyle(color: Color(0xFF475569), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                                'SPONSORED • GOOGLE ADMOB BANNER ACTIVE',
+                                style: TextStyle(color: Color(0xFF64748B), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.4),
                               ),
                       ),
                     ],
@@ -357,7 +364,8 @@ jobs:
           .hud-exit-btn { pointer-events: auto; cursor: pointer; background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%); border: 2px solid #fca5a5; color: #fff; font-weight: 900; font-size: 11px; padding: 6px 12px; border-radius: 10px; box-shadow: 0 4px 12px rgba(239,68,68,0.5); }
           .gamepad { position: absolute; bottom: 10px; left: 18px; right: 18px; display: none; justify-content: space-between; align-items: flex-end; z-index: 30; pointer-events: none; }
           .pad-cluster { display: flex; gap: 14px; pointer-events: auto; align-items: flex-end; }
-          .horn-btn { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 3px solid #fde047; color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #78350f; cursor: pointer; margin-bottom: 6px; }
+          .horn-btn { width: 58px; height: 58px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 3px solid #fde047; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #78350f, 0 0 15px rgba(245,158,11,0.5); cursor: pointer; margin-bottom: 6px; transition: transform 0.1s; }
+          .horn-btn.active { transform: scale(0.92) translateY(3px); background: radial-gradient(circle, #fde047 0%, #f59e0b 100%); box-shadow: 0 2px 0 #78350f, 0 0 25px #fde047; }
           .car-pedal { position: relative; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.9); }
           .pedal-accel { width: 56px; height: 118px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
           .pedal-accel.pressed { transform: scaleY(0.92); border-color: #10b981; box-shadow: 0 0 18px #10b981; }
@@ -376,7 +384,7 @@ jobs:
           <div id="gameContainer">
           <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
-          <!-- HOME SCREEN WITH SEPARATE THEME & WEATHER BUTTONS -->
+          <!-- HOME SCREEN -->
           <div id="homeScreen" class="screen">
             <div class="flex items-center gap-2 bg-slate-900/90 border border-red-500/50 px-3 py-1 rounded-full mb-1 shadow-lg">
               <svg width="32" height="16" viewBox="0 0 120 60"><circle cx="60" cy="30" r="22" fill="#facc15"/><path d="M12 38 L42 22 L55 32 L38 44 Z" fill="#ef4444"/><path d="M108 38 L78 22 L65 32 L82 44 Z" fill="#ef4444"/></svg>
@@ -384,11 +392,11 @@ jobs:
             </div>
             <div class="title-animated">APEX TURBO F1 & GT</div>
 
-            <div class="flex items-center justify-center gap-6 my-1 w-full max-w-3xl">
+            <div class="flex items-center justify-center gap-5 my-1 w-full max-w-3xl">
               <div id="homeCarPreview" class="w-24 h-24 flex items-center justify-center filter drop-shadow-[0_8px_18px_rgba(245,158,11,0.55)]"></div>
 
-              <div class="flex flex-col gap-2 bg-slate-900/80 border border-slate-700/80 p-2.5 rounded-2xl">
-                <div class="text-[10px] font-black text-amber-400 tracking-wider uppercase text-left">🌍 SELECT WORLD TRACK (ALAG-ALAG THEMES):</div>
+              <div class="flex flex-col gap-2 bg-slate-900/85 border border-slate-700/80 p-2.5 rounded-2xl">
+                <div class="text-[10px] font-black text-amber-400 tracking-wider uppercase text-left">🌍 SELECT WORLD TRACK:</div>
                 <div class="flex flex-wrap gap-1.5" id="themeButtonsWrap">
                   <button class="choice-chip active-theme" onclick="selectTheme(0)">🏜️ SAHARA DESERT</button>
                   <button class="choice-chip" onclick="selectTheme(1)">🌴 AMAZON JUNGLE</button>
@@ -408,8 +416,8 @@ jobs:
 
             <div class="flex flex-wrap items-center justify-center gap-2.5 mt-2">
               <button class="arcade-btn btn-green" onclick="startGameSession()">🏁 START RACE</button>
-              <button class="arcade-btn btn-blue" onclick="openGarage()">🏎️ 50 CARS GARAGE</button>
-              <button class="arcade-btn btn-purple" onclick="openSettings()">⚙️ CONTROLS</button>
+              <button class="arcade-btn btn-blue" onclick="openGarage()">🏎️ 50 VEHICLES</button>
+              <button class="arcade-btn btn-purple" onclick="openSettings()">⚙️ CONTROLS & SOUND</button>
               <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red" style="text-decoration:none;">▶️ @THEGOVINDGUPTA</a>
             </div>
           </div>
@@ -418,7 +426,7 @@ jobs:
           <div id="garageScreen" class="screen" style="display:none;">
             <div class="flex items-center justify-between w-full max-w-4xl mb-2">
               <button class="arcade-btn" style="padding:6px 16px;" onclick="closeGarage()">◀ BACK</button>
-              <div class="title-animated" style="font-size:20px;">50 HYPERCARS, F1 & TRUCKS</div>
+              <div class="title-animated" style="font-size:20px;">50 HYPERCARS, BIKES, BUSES & TRUCKS</div>
               <div class="hud-card"><span class="text-emerald-400 font-black">🪙 <span id="garageCoins">1200</span></span></div>
             </div>
             <div id="garageGrid" class="garage-grid"></div>
@@ -429,7 +437,7 @@ jobs:
             <div class="title-animated" style="font-size:24px; margin-bottom:12px;">F1 COCKPIT SETTINGS</div>
             <div class="bg-slate-900/95 border-2 border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col gap-3">
               <div class="flex justify-between items-center text-white font-bold text-sm"><span>🛞 STEERING MODE</span><button id="controlModeBtn" class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleControlMode()">F1 YOKE HANDLE</button></div>
-              <div class="flex justify-between items-center text-white font-bold text-sm"><span>🔊 ENGINE & MUSIC</span><button id="audioToggleBtn" class="arcade-btn btn-green" style="padding:6px 14px; font-size:11px;" onclick="toggleAudio()">ON</button></div>
+              <div class="flex justify-between items-center text-white font-bold text-sm"><span>🔊 ENGINE & RACING MUSIC</span><button id="audioToggleBtn" class="arcade-btn btn-green" style="padding:6px 14px; font-size:11px;" onclick="toggleAudio()">LOUD ON</button></div>
               <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red w-full justify-center" style="text-decoration:none;">📺 SUBSCRIBE @THEGOVINDGUPTA</a>
             </div>
             <button class="arcade-btn mt-4" onclick="closeSettings()">◀ BACK</button>
@@ -465,7 +473,7 @@ jobs:
                 <div class="steer-btn" onpointerdown="setSteer(-1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">◀</div>
                 <div class="steer-btn" onpointerdown="setSteer(1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">▶</div>
               </div>
-              <div id="hornBtnEl" class="horn-btn" onpointerdown="triggerCarHorn(true)" onpointerup="triggerCarHorn(false)">📢</div>
+              <div id="hornBtnEl" class="horn-btn" onpointerdown="triggerCarHorn(true)" onpointerup="triggerCarHorn(false)" onpointerleave="triggerCarHorn(false)">📢</div>
             </div>
             <div class="pad-cluster">
               <div id="brakePedalEl" class="car-pedal pedal-brake-real" onpointerdown="setBrake(true)" onpointerup="setBrake(false)" onpointerleave="setBrake(false)"><div class="w-3 h-3 rounded-full bg-red-500"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
@@ -502,9 +510,9 @@ jobs:
           <script>
           const canvas = document.getElementById('gameCanvas');
           const ctx = canvas.getContext('2d');
-          let coins = parseInt(localStorage.getItem('apex_coins_v6') || '1200');
-          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v6') || '0');
-          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v6') || '[0]');
+          let coins = parseInt(localStorage.getItem('apex_coins_v7') || '1200');
+          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v7') || '0');
+          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v7') || '[0]');
           let audioEnabled = true;
           let controlMode = 'handle';
           let isRunning = false;
@@ -524,24 +532,37 @@ jobs:
           let hornWaves = [];
           let weatherParticles = [];
           let lightningAlpha = 0;
+          let pedalPhase = 0;
 
           const worldThemes = [
-            { id: 'desert', name: 'SAHARA DESERT', ground1: '#d97706', ground2: '#b45309', patch: '#f59e0b', road: '#1e293b', shoulder: '#92400e', kerb1: '#ef4444', kerb2: '#fef08a' },
-            { id: 'jungle', name: 'AMAZON JUNGLE', ground1: '#15803d', ground2: '#14532d', patch: '#22c55e', road: '#1e293b', shoulder: '#3f6212', kerb1: '#ef4444', kerb2: '#f8fafc' },
-            { id: 'city', name: 'CYBER CITY', ground1: '#090d16', ground2: '#1e1b4b', patch: '#312e81', road: '#0f172a', shoulder: '#0284c7', kerb1: '#38bdf8', kerb2: '#f43f5e' },
-            { id: 'snow', name: 'HIMALAYA SNOW', ground1: '#e2e8f0', ground2: '#cbd5e1', patch: '#f8fafc', road: '#334155', shoulder: '#64748b', kerb1: '#ef4444', kerb2: '#ffffff' }
+            { id: 'desert', name: 'SAHARA DESERT', ground1: '#d97706', ground2: '#b45309', road: '#1e293b', shoulder: '#92400e', kerb1: '#ef4444', kerb2: '#fef08a' },
+            { id: 'jungle', name: 'AMAZON JUNGLE', ground1: '#15803d', ground2: '#14532d', road: '#1e293b', shoulder: '#3f6212', kerb1: '#ef4444', kerb2: '#f8fafc' },
+            { id: 'city', name: 'CYBER CITY', ground1: '#090d16', ground2: '#1e1b4b', road: '#0f172a', shoulder: '#0284c7', kerb1: '#38bdf8', kerb2: '#f43f5e' },
+            { id: 'snow', name: 'HIMALAYA SNOW', ground1: '#e2e8f0', ground2: '#cbd5e1', road: '#334155', shoulder: '#64748b', kerb1: '#ef4444', kerb2: '#ffffff' }
           ];
           let currentThemeIdx = 0;
           const weatherMoods = ['SUNNY DAY', 'MIDNIGHT', 'HEAVY RAIN', 'THUNDER STORM'];
           let currentMoodIdx = 0;
 
+          // 6 Distinct Vehicle Types: F1, GT Car, Superbike, SUV, Tour Bus, Heavy Truck
           const vehicleCategories = [
-            { typeId: 2, className: 'F1 HYPERCAR', prefix: 'RedBull RB20', scaleW: 1.04, scaleH: 1.06 },
-            { typeId: 1, className: 'GT SUPERCAR', prefix: 'Ferrari GT', scaleW: 1.0, scaleH: 1.02 },
-            { typeId: 0, className: 'STREET TURBO', prefix: 'Porsche 911', scaleW: 0.94, scaleH: 0.94 },
-            { typeId: 3, className: 'RAPTOR PICKUP', prefix: 'Ford F-150', scaleW: 1.08, scaleH: 1.12 },
-            { typeId: 4, className: 'MONSTER SUV', prefix: 'G-Wagon 4x4', scaleW: 1.1, scaleH: 1.08 },
-            { typeId: 5, className: 'HEAVY RIG', prefix: 'Titan Semi', scaleW: 1.2, scaleH: 1.32 }
+            { typeId: 2, vKind: 'f1', className: 'F1 HYPERCAR', prefix: 'RedBull RB20', w: 54, h: 118 },
+            { typeId: 1, vKind: 'car', className: 'GT SUPERCAR', prefix: 'Ferrari GT', w: 54, h: 116 },
+            { typeId: 0, vKind: 'bike', className: 'SUPERBIKE', prefix: 'Hayabusa 1300', w: 28, h: 74 },
+            { typeId: 3, vKind: 'suv', className: 'MONSTER SUV', prefix: 'Defender 4x4', w: 58, h: 124 },
+            { typeId: 4, vKind: 'bus', className: 'LUXURY BUS', prefix: 'Volvo Coach', w: 64, h: 166 },
+            { typeId: 5, vKind: 'truck', className: 'CARGO TRUCK', prefix: 'Titan 18-Wheeler', w: 66, h: 182 }
+          ];
+
+          // Traffic also includes Bicycles ('cycle') + Bikes + Cars + Buses + Trucks
+          const trafficBlueprints = [
+            { vKind: 'cycle', w: 22, h: 54, minSpd: 22, maxSpd: 35 },
+            { vKind: 'bike', w: 28, h: 72, minSpd: 68, maxSpd: 105 },
+            { vKind: 'car', w: 54, h: 114, minSpd: 58, maxSpd: 96 },
+            { vKind: 'f1', w: 54, h: 116, minSpd: 75, maxSpd: 115 },
+            { vKind: 'suv', w: 58, h: 124, minSpd: 52, maxSpd: 86 },
+            { vKind: 'bus', w: 64, h: 166, minSpd: 42, maxSpd: 68 },
+            { vKind: 'truck', w: 66, h: 182, minSpd: 36, maxSpd: 60 }
           ];
 
           const carPalettes = [
@@ -557,10 +578,22 @@ jobs:
           for (let i = 0; i < 50; i++) {
             let pal = carPalettes[i % carPalettes.length];
             let cat = vehicleCategories[i % vehicleCategories.length];
-            carsData.push({ id: i, name: cat.prefix + ' #' + (i + 1), categoryLabel: cat.className, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, topSpeed: 210 + i * 3, accel: 1.3 + i * 0.025, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, price: i === 0 ? 0 : i * 350 });
+            carsData.push({
+              id: i,
+              name: cat.prefix + ' #' + (i + 1),
+              categoryLabel: cat.className,
+              vKind: cat.vKind,
+              w: cat.w,
+              h: cat.h,
+              topSpeed: 210 + i * 3,
+              accel: 1.35 + i * 0.025,
+              bodyColor: pal.body,
+              stripeColor: pal.stripe,
+              accentColor: pal.accent,
+              price: i === 0 ? 0 : i * 350
+            });
           }
 
-          // Generate Natural Roadside Scenery Objects
           function initScenery() {
             sceneryItems = [];
             for (let i = 0; i < 36; i++) {
@@ -572,80 +605,293 @@ jobs:
           }
           initScenery();
 
-          let audioCtx = null, engineOsc = null, engineGain = null, musicTimer = null, musicStep = 0;
+          // ==================== LOUD PRO AUDIO ENGINE ====================
+          let audioCtx = null;
+          let masterCompressor = null;
+          let engineOsc1 = null, engineOsc2 = null, engineGain = null;
+          let hornOsc1 = null, hornOsc2 = null, hornGain = null;
+          let musicTimer = null, musicStep = 0;
+
           function ensureAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            try {
+              if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterCompressor = audioCtx.createDynamicsCompressor();
+                masterCompressor.threshold.setValueAtTime(-14, audioCtx.currentTime);
+                masterCompressor.knee.setValueAtTime(12, audioCtx.currentTime);
+                masterCompressor.ratio.setValueAtTime(6, audioCtx.currentTime);
+                masterCompressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+                masterCompressor.release.setValueAtTime(0.15, audioCtx.currentTime);
+                masterCompressor.connect(audioCtx.destination);
+              }
+              if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+              }
+            } catch (e) {}
           }
+
+          window.unlockAndStartAudio = function() {
+            ensureAudio();
+            if (!isRunning && audioEnabled && !musicTimer) {
+              startHomeMusic();
+            }
+          };
+
+          ['touchstart', 'pointerdown', 'mousedown', 'click'].forEach(evt => {
+            window.addEventListener(evt, () => {
+              ensureAudio();
+              if (!isRunning && audioEnabled && !musicTimer) {
+                startHomeMusic();
+              }
+              if (isRunning && audioEnabled && !engineOsc1) {
+                startEngineAudio();
+              }
+            }, { passive: true });
+          });
+
           function startEngineAudio() {
             if (!audioEnabled) return;
             try {
               ensureAudio();
-              if (engineOsc) return;
-              engineOsc = audioCtx.createOscillator();
+              if (engineOsc1) return;
+              engineOsc1 = audioCtx.createOscillator();
+              engineOsc2 = audioCtx.createOscillator();
+              const filter = audioCtx.createBiquadFilter();
               engineGain = audioCtx.createGain();
-              engineOsc.type = 'sawtooth';
-              engineOsc.frequency.value = 55;
+
+              engineOsc1.type = 'sawtooth';
+              engineOsc2.type = 'square';
+              engineOsc1.frequency.value = 95;
+              engineOsc2.frequency.value = 190;
+
+              filter.type = 'lowpass';
+              filter.frequency.value = 950;
+
               engineGain.gain.value = 0.001;
-              engineOsc.connect(engineGain);
-              engineGain.connect(audioCtx.destination);
-              engineOsc.start();
+
+              engineOsc1.connect(filter);
+              engineOsc2.connect(filter);
+              filter.connect(engineGain);
+              engineGain.connect(masterCompressor);
+
+              engineOsc1.start();
+              engineOsc2.start();
             } catch (e) {}
           }
+
           function updateEngineAudio() {
-            if (!engineOsc || !engineGain) return;
+            if (!engineOsc1 || !engineOsc2 || !engineGain || !audioCtx) return;
             if (!isRunning || !audioEnabled) {
-              engineGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.08);
+              engineGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.06);
               return;
             }
-            let rpmFreq = 52 + (speed * 0.85) + (gasPressed ? 28 : 0);
-            let vol = gasPressed ? 0.085 : (speed > 5 ? 0.035 : 0.012);
-            engineOsc.frequency.setTargetAtTime(rpmFreq, audioCtx.currentTime, 0.05);
-            engineGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.06);
+            // Simulate realistic gear RPM sweep (loud & audible on phone speakers)
+            let gearRatio = (speed % 42) / 42;
+            let baseFreq = 85 + (speed * 1.15) + (gearRatio * 65) + (gasPressed ? 35 : 0);
+            let targetVol = gasPressed ? 0.34 : (speed > 5 ? 0.18 : 0.09);
+            engineOsc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.04);
+            engineOsc2.frequency.setTargetAtTime(baseFreq * 1.5, audioCtx.currentTime, 0.04);
+            engineGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
           }
-          function playCrashSound() {
-            if (!audioEnabled) return;
+
+          function playBrakeScreech() {
+            if (!audioEnabled || speed < 60) return;
             try {
               ensureAudio();
               const now = audioCtx.currentTime;
               const osc = audioCtx.createOscillator();
               const g = audioCtx.createGain();
               osc.type = 'sawtooth';
-              osc.frequency.setValueAtTime(140, now);
-              osc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
-              g.gain.setValueAtTime(0.28, now);
-              g.gain.exponentialRampToValueAtTime(0.005, now + 0.45);
-              osc.connect(g); g.connect(audioCtx.destination);
-              osc.start(now); osc.stop(now + 0.45);
+              osc.frequency.setValueAtTime(1150, now);
+              osc.frequency.linearRampToValueAtTime(880, now + 0.18);
+              g.gain.setValueAtTime(0.16, now);
+              g.gain.exponentialRampToValueAtTime(0.005, now + 0.18);
+              osc.connect(g); g.connect(masterCompressor);
+              osc.start(now); osc.stop(now + 0.18);
             } catch (e) {}
           }
+
+          // Loud Multi-Layered Crash Sound (Metallic Impact + Noise Crunch + Bass Boom)
+          function playCrashSound() {
+            if (!audioEnabled) return;
+            try {
+              ensureAudio();
+              const now = audioCtx.currentTime;
+
+              // 1. Heavy Sub-Bass & Mid Boom
+              const boomOsc = audioCtx.createOscillator();
+              const boomGain = audioCtx.createGain();
+              boomOsc.type = 'sawtooth';
+              boomOsc.frequency.setValueAtTime(180, now);
+              boomOsc.frequency.exponentialRampToValueAtTime(32, now + 0.65);
+              boomGain.gain.setValueAtTime(0.65, now);
+              boomGain.gain.exponentialRampToValueAtTime(0.005, now + 0.65);
+              boomOsc.connect(boomGain); boomGain.connect(masterCompressor);
+              boomOsc.start(now); boomOsc.stop(now + 0.65);
+
+              // 2. White Noise Metallic Crunch & Glass Shatter
+              const bufSize = audioCtx.sampleRate * 0.55;
+              const noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+              const output = noiseBuf.getChannelData(0);
+              for (let i = 0; i < bufSize; i++) {
+                output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.18));
+              }
+              const whiteNoise = audioCtx.createBufferSource();
+              whiteNoise.buffer = noiseBuf;
+              const noiseGain = audioCtx.createGain();
+              noiseGain.gain.setValueAtTime(0.75, now);
+              noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
+              whiteNoise.connect(noiseGain); noiseGain.connect(masterCompressor);
+              whiteNoise.start(now);
+            } catch (e) {}
+          }
+
+          // Loud Synthwave Racing Home Screen Music (Kick + Snare + Bass + Lead)
           function startHomeMusic() {
             stopHomeMusic();
             if (!audioEnabled || isRunning) return;
-            const notes = [146.83, 174.61, 220.0, 261.63, 293.66, 261.63, 220.0, 174.61];
+            const bassNotes = [110, 110, 130.81, 130.81, 146.83, 146.83, 164.81, 130.81];
+            const leadNotes = [440, 523.25, 659.25, 523.25, 587.33, 659.25, 783.99, 659.25];
             musicTimer = setInterval(() => {
-              if (isRunning || !audioEnabled || !audioCtx || audioCtx.state !== 'running') return;
+              if (isRunning || !audioEnabled || !audioCtx) return;
               try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
                 const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(notes[musicStep % notes.length], now);
-                g.gain.setValueAtTime(0.035, now);
-                g.gain.exponentialRampToValueAtTime(0.002, now + 0.16);
-                osc.connect(g); g.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 0.16);
+                const step = musicStep % 8;
+
+                // Punchy Kick Drum on even steps
+                if (step % 2 === 0) {
+                  const kOsc = audioCtx.createOscillator();
+                  const kGain = audioCtx.createGain();
+                  kOsc.type = 'sine';
+                  kOsc.frequency.setValueAtTime(150, now);
+                  kOsc.frequency.exponentialRampToValueAtTime(42, now + 0.14);
+                  kGain.gain.setValueAtTime(0.45, now);
+                  kGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                  kOsc.connect(kGain); kGain.connect(masterCompressor);
+                  kOsc.start(now); kOsc.stop(now + 0.15);
+                }
+
+                // Driving Bassline
+                const bOsc = audioCtx.createOscillator();
+                const bGain = audioCtx.createGain();
+                bOsc.type = 'sawtooth';
+                bOsc.frequency.setValueAtTime(bassNotes[step], now);
+                bGain.gain.setValueAtTime(0.24, now);
+                bGain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                bOsc.connect(bGain); bGain.connect(masterCompressor);
+                bOsc.start(now); bOsc.stop(now + 0.16);
+
+                // Racing Lead Synth
+                const lOsc = audioCtx.createOscillator();
+                const lGain = audioCtx.createGain();
+                lOsc.type = 'square';
+                lOsc.frequency.setValueAtTime(leadNotes[step], now);
+                lGain.gain.setValueAtTime(0.18, now);
+                lGain.gain.exponentialRampToValueAtTime(0.008, now + 0.16);
+                lOsc.connect(lGain); lGain.connect(masterCompressor);
+                lOsc.start(now); lOsc.stop(now + 0.16);
+
                 musicStep++;
               } catch (e) {}
-            }, 180);
+            }, 175);
           }
-          function stopHomeMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
-          window.addEventListener('pointerdown', () => { ensureAudio(); if (!isRunning && !musicTimer) startHomeMusic(); }, { once: true });
 
-          // Clean, Sharp HD SVG Car Preview
+          function stopHomeMusic() {
+            if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+          }
+
+          // Loud Sustained Dual-Tone Car Horn when Horn Icon Pressed
+          window.triggerCarHorn = function(pressed) {
+            const btn = document.getElementById('hornBtnEl');
+            if (btn) btn.classList.toggle('active', pressed);
+            if (!pressed) {
+              if (hornGain && audioCtx) {
+                try {
+                  hornGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.03);
+                  setTimeout(() => {
+                    try { if (hornOsc1) { hornOsc1.stop(); hornOsc1 = null; } } catch (e) {}
+                    try { if (hornOsc2) { hornOsc2.stop(); hornOsc2 = null; } } catch (e) {}
+                  }, 60);
+                } catch (e) {}
+              }
+              return;
+            }
+
+            hornWaves.push({ x: playerX, y: playerWorldY - 50, radius: 18, alpha: 1.0 });
+
+            if (audioEnabled) {
+              try {
+                ensureAudio();
+                if (hornOsc1) { try { hornOsc1.stop(); } catch (e) {} }
+                if (hornOsc2) { try { hornOsc2.stop(); } catch (e) {} }
+
+                const now = audioCtx.currentTime;
+                hornOsc1 = audioCtx.createOscillator();
+                hornOsc2 = audioCtx.createOscillator();
+                hornGain = audioCtx.createGain();
+
+                // Classic Loud Dual-Tone Car/Truck Air Horn (415Hz + 515Hz)
+                hornOsc1.type = 'sawtooth';
+                hornOsc2.type = 'square';
+                hornOsc1.frequency.setValueAtTime(415, now);
+                hornOsc2.frequency.setValueAtTime(515, now);
+
+                hornGain.gain.setValueAtTime(0.48, now);
+
+                hornOsc1.connect(hornGain);
+                hornOsc2.connect(hornGain);
+                hornGain.connect(masterCompressor);
+
+                hornOsc1.start(now);
+                hornOsc2.start(now);
+              } catch (e) {}
+            }
+
+            // Clear lane ahead when honking!
+            trafficCars.forEach((t, idx) => {
+              let distAhead = playerWorldY - t.worldY;
+              if (distAhead > 50 && distAhead < 550 && Math.abs(t.x - playerX) < 80) {
+                let candidateLanes = [];
+                if (t.lane > 0) candidateLanes.push(t.lane - 1);
+                if (t.lane < 3) candidateLanes.push(t.lane + 1);
+                for (let cl of candidateLanes) {
+                  if (canVehicleEnterLane(idx, cl, t.worldY, true)) {
+                    t.lane = cl;
+                    t.targetX = lanePositions[cl];
+                    t.turnSignal = cl > t.lane ? 1 : -1;
+                    t.signalTimer = 45;
+                    break;
+                  }
+                }
+              }
+            });
+          };
+
+          // Clean SVG Preview for Garage & Home Screen
           function createCarSVG(car, w = 72, h = 110) {
-            if (car.bodyStyle === 2) {
-              // F1 Open-Wheel Hypercar SVG
+            if (car.vKind === 'bike') {
+              return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 80 140\" xmlns=\"http://www.w3.org/2000/svg\">' +
+                '<rect x=\"33\" y=\"8\" width=\"14\" height=\"26\" rx=\"5\" fill=\"#090d16\"/>' +
+                '<rect x=\"32\" y=\"104\" width=\"16\" height=\"28\" rx=\"5\" fill=\"#090d16\"/>' +
+                '<path d=\"M26 32 Q40 12 54 32 L50 108 L30 108 Z\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2.5\"/>' +
+                '<rect x=\"20\" y=\"38\" width=\"40\" height=\"6\" rx=\"3\" fill=\"#94a3b8\"/>' +
+                '<ellipse cx=\"40\" cy=\"68\" rx=\"13\" ry=\"16\" fill=\"#0f172a\"/>' +
+                '<circle cx=\"40\" cy=\"62\" r=\"9\" fill=\"' + car.stripeColor + '\" stroke=\"#000\" stroke-width=\"2\"/>' +
+                '<rect x=\"34\" y=\"16\" width=\"12\" height=\"6\" rx=\"3\" fill=\"#fef08a\"/>' +
+              '</svg>';
+            }
+            if (car.vKind === 'bus' || car.vKind === 'truck') {
+              return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 90 150\" xmlns=\"http://www.w3.org/2000/svg\">' +
+                '<rect x=\"10\" y=\"8\" width=\"70\" height=\"134\" rx=\"10\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2.5\"/>' +
+                '<rect x=\"16\" y=\"16\" width=\"58\" height=\"22\" rx=\"5\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/>' +
+                '<rect x=\"36\" y=\"8\" width=\"18\" height=\"134\" fill=\"' + car.stripeColor + '\" opacity=\"0.85\"/>' +
+                '<rect x=\"24\" y=\"52\" width=\"42\" height=\"28\" rx=\"5\" fill=\"#0f172a\"/>' +
+                '<rect x=\"24\" y=\"92\" width=\"42\" height=\"28\" rx=\"5\" fill=\"#0f172a\"/>' +
+                '<rect x=\"16\" y=\"10\" width=\"14\" height=\"5\" fill=\"#fef08a\"/><rect x=\"60\" y=\"10\" width=\"14\" height=\"5\" fill=\"#fef08a\"/>' +
+              '</svg>';
+            }
+            if (car.vKind === 'f1') {
               return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 90 150\" xmlns=\"http://www.w3.org/2000/svg\">' +
                 '<rect x=\"6\" y=\"26\" width=\"16\" height=\"30\" rx=\"5\" fill=\"#090d16\" stroke=\"#facc15\" stroke-width=\"1.5\"/>' +
                 '<rect x=\"68\" y=\"26\" width=\"16\" height=\"30\" rx=\"5\" fill=\"#090d16\" stroke=\"#facc15\" stroke-width=\"1.5\"/>' +
@@ -653,13 +899,11 @@ jobs:
                 '<rect x=\"66\" y=\"98\" width=\"18\" height=\"34\" rx=\"5\" fill=\"#090d16\" stroke=\"#ef4444\" stroke-width=\"1.5\"/>' +
                 '<path d=\"M14 18 L76 18 L70 28 L20 28 Z\" fill=\"' + car.accentColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"1.5\"/>' +
                 '<path d=\"M36 16 L54 16 L64 62 L66 116 L24 116 L26 62 Z\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2\"/>' +
-                '<path d=\"M40 16 L50 16 L48 56 L42 56 Z\" fill=\"' + car.stripeColor + '\"/>' +
                 '<ellipse cx=\"45\" cy=\"76\" rx=\"11\" ry=\"18\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/>' +
                 '<circle cx=\"45\" cy=\"78\" r=\"6\" fill=\"#facc15\"/>' +
                 '<rect x=\"18\" y=\"122\" width=\"54\" height=\"14\" rx=\"4\" fill=\"' + car.accentColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"1.5\"/>' +
               '</svg>';
             }
-            // Sleek GT / Supercar SVG
             return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 90 150\" xmlns=\"http://www.w3.org/2000/svg\">' +
               '<rect x=\"8\" y=\"28\" width=\"10\" height=\"26\" rx=\"4\" fill=\"#090d16\"/>' +
               '<rect x=\"72\" y=\"28\" width=\"10\" height=\"26\" rx=\"4\" fill=\"#090d16\"/>' +
@@ -670,9 +914,6 @@ jobs:
               '<path d=\"M24 46 Q45 38 66 46 L62 96 Q45 102 28 96 Z\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/>' +
               '<rect x=\"20\" y=\"16\" width=\"12\" height=\"6\" rx=\"3\" fill=\"#fef08a\"/>' +
               '<rect x=\"58\" y=\"16\" width=\"12\" height=\"6\" rx=\"3\" fill=\"#fef08a\"/>' +
-              '<rect x=\"18\" y=\"118\" width=\"54\" height=\"6\" rx=\"2\" fill=\"' + car.accentColor + '\"/>' +
-              '<rect x=\"20\" y=\"123\" width=\"14\" height=\"4\" rx=\"2\" fill=\"#ef4444\"/>' +
-              '<rect x=\"56\" y=\"123\" width=\"14\" height=\"4\" rx=\"2\" fill=\"#ef4444\"/>' +
             '</svg>';
           }
 
@@ -680,9 +921,9 @@ jobs:
             document.getElementById('uiCoins').innerText = coins;
             document.getElementById('garageCoins').innerText = coins;
             document.getElementById('homeCarPreview').innerHTML = createCarSVG(carsData[activeCarIndex], 84, 126);
-            localStorage.setItem('apex_coins_v6', coins);
-            localStorage.setItem('apex_car_v6', activeCarIndex);
-            localStorage.setItem('apex_unlocked_v6', JSON.stringify(unlockedCars));
+            localStorage.setItem('apex_coins_v7', coins);
+            localStorage.setItem('apex_car_v7', activeCarIndex);
+            localStorage.setItem('apex_unlocked_v7', JSON.stringify(unlockedCars));
           }
 
           window.selectTheme = function(idx) {
@@ -697,57 +938,75 @@ jobs:
             btns.forEach((b, i) => b.classList.toggle('active-mood', i === idx));
           };
 
-          window.triggerCarHorn = function(pressed) {
-            if (!pressed) return;
-            hornWaves.push({ x: playerX, y: playerWorldY - 45, radius: 16, alpha: 1.0 });
-            if (audioEnabled) {
-              try {
-                ensureAudio();
-                const now = audioCtx.currentTime;
-                [440, 554].forEach(f => {
-                  const o = audioCtx.createOscillator();
-                  const g = audioCtx.createGain();
-                  o.type = 'triangle'; o.frequency.setValueAtTime(f, now);
-                  g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.005, now + 0.22);
-                  o.connect(g); g.connect(audioCtx.destination);
-                  o.start(now); o.stop(now + 0.22);
-                });
-              } catch (e) {}
-            }
-            trafficCars.forEach(t => {
-              let distAhead = playerWorldY - t.worldY;
-              if (distAhead > 60 && distAhead < 520 && Math.abs(t.x - playerX) < 75) {
-                let alt = t.lane === 0 ? 1 : t.lane === 3 ? 2 : (t.lane + 1);
-                t.lane = alt; t.targetX = lanePositions[alt];
-              }
-            });
-          };
+          // ==================== SMART NON-OVERLAPPING TRAFFIC AI ====================
+          function canVehicleEnterLane(selfIdx, targetLane, wy, ignorePlayer = false) {
+            if (targetLane < 0 || targetLane > 3) return false;
+            const targetX = lanePositions[targetLane];
 
-          function getPlayerClosestLane() {
-            let best = 0, minD = 9999;
-            lanePositions.forEach((lx, idx) => { let d = Math.abs(playerX - lx); if (d < minD) { minD = d; best = idx; } });
-            return best;
+            // 1. Check against all other traffic vehicles so they NEVER overlap
+            for (let j = 0; j < trafficCars.length; j++) {
+              if (j === selfIdx) continue;
+              const other = trafficCars[j];
+              const sameOrEnteringLane = (other.lane === targetLane) || (Math.abs(other.x - targetX) < 65);
+              if (sameOrEnteringLane) {
+                const minGap = ((trafficCars[selfIdx] ? trafficCars[selfIdx].h : 130) + other.h) * 0.5 + 75;
+                if (Math.abs(other.worldY - wy) < minGap) {
+                  return false;
+                }
+              }
+            }
+
+            // 2. Check against Player Car so traffic NEVER side-swipes or cuts into the player!
+            if (!ignorePlayer && isRunning) {
+              const lateralDistToPlayer = Math.abs(targetX - playerX);
+              const longitudinalDistToPlayer = Math.abs(wy - playerWorldY);
+              if (lateralDistToPlayer < 95 && longitudinalDistToPlayer < 290) {
+                return false;
+              }
+            }
+            return true;
           }
 
-          function createTrafficVehicle(lane, worldY, forceDirectX = false) {
+          function createTrafficVehicle(lane, worldY) {
             let pal = carPalettes[Math.floor(Math.random() * carPalettes.length)];
-            let cat = vehicleCategories[Math.floor(Math.random() * vehicleCategories.length)];
-            let spd = cat.typeId === 5 ? (32 + Math.random() * 16) : (42 + Math.random() * 28);
-            let startX = forceDirectX ? playerX : lanePositions[lane];
-            return { lane, x: startX, targetX: startX, worldY, speed: spd, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH };
+            // Pick vehicle blueprint (Cycles prefer outer lanes 0 or 3)
+            let bpIndex = Math.floor(Math.random() * trafficBlueprints.length);
+            if (bpIndex === 0 && lane !== 0 && lane !== 3) {
+              lane = Math.random() < 0.5 ? 0 : 3;
+            }
+            let bp = trafficBlueprints[bpIndex];
+            let baseSpd = bp.minSpd + Math.random() * (bp.maxSpd - bp.minSpd);
+            let startX = lanePositions[lane];
+            return {
+              lane: lane,
+              x: startX,
+              targetX: startX,
+              worldY: worldY,
+              speed: baseSpd,
+              desiredSpeed: baseSpd,
+              vKind: bp.vKind,
+              w: bp.w,
+              h: bp.h,
+              bodyColor: pal.body,
+              stripeColor: pal.stripe,
+              accentColor: pal.accent,
+              changeCooldown: 90 + Math.floor(Math.random() * 140),
+              turnSignal: 0,
+              signalTimer: 0
+            };
           }
 
           function spawnTrafficAhead() {
             trafficCars = [];
-            let pLane = getPlayerClosestLane();
-            for (let i = 0; i < 6; i++) {
-              let lane = (i === 0 || i === 3) ? pLane : (i % 4);
-              let wy = playerWorldY - 300 - (i * 240);
-              trafficCars.push(createTrafficVehicle(lane, wy, i === 0));
+            for (let i = 0; i < 7; i++) {
+              let lane = i % 4;
+              let wy = playerWorldY - 340 - (i * 270);
+              trafficCars.push(createTrafficVehicle(lane, wy));
             }
           }
 
           window.startGameSession = function() {
+            ensureAudio();
             stopHomeMusic();
             startEngineAudio();
             document.getElementById('homeScreen').style.display = 'none';
@@ -764,6 +1023,7 @@ jobs:
 
           window.backToHome = function() {
             isRunning = false;
+            triggerCarHorn(false);
             updateEngineAudio();
             startHomeMusic();
             document.getElementById('gameOverScreen').style.display = 'none';
@@ -836,7 +1096,7 @@ jobs:
               document.getElementById('gameOverScreen').style.display = 'none';
               document.getElementById('hudBar').style.display = 'flex';
               document.getElementById('gamepad').style.display = 'flex';
-              trafficCars.forEach((t, idx) => { t.worldY = playerWorldY - 500 - idx * 230; });
+              trafficCars.forEach((t, idx) => { t.worldY = playerWorldY - 520 - idx * 280; });
               speed = 70; isRunning = true;
             }
           };
@@ -844,8 +1104,8 @@ jobs:
           window.closeModal = function() { document.getElementById('customModal').style.display = 'none'; };
           window.toggleAudio = function() {
             audioEnabled = !audioEnabled;
-            document.getElementById('audioToggleBtn').innerText = audioEnabled ? 'ON' : 'OFF';
-            if (!audioEnabled) stopHomeMusic(); else startHomeMusic();
+            document.getElementById('audioToggleBtn').innerText = audioEnabled ? 'LOUD ON' : 'OFF';
+            if (!audioEnabled) { stopHomeMusic(); triggerCarHorn(false); } else { ensureAudio(); startHomeMusic(); }
           };
           window.cycleControlMode = function() {
             controlMode = controlMode === 'handle' ? 'buttons' : 'handle';
@@ -856,7 +1116,11 @@ jobs:
 
           window.setSteer = function(d) { steerInput = d; };
           window.setGas = function(v) { gasPressed = v; ensureAudio(); startEngineAudio(); document.getElementById('accelPedalEl').classList.toggle('pressed', v); };
-          window.setBrake = function(v) { brakePressed = v; document.getElementById('brakePedalEl').classList.toggle('pressed', v); };
+          window.setBrake = function(v) {
+            if (v && !brakePressed) playBrakeScreech();
+            brakePressed = v;
+            document.getElementById('brakePedalEl').classList.toggle('pressed', v);
+          };
 
           const handleWrap = document.getElementById('steeringHandleWrap');
           const wheelSVG = document.getElementById('steeringWheelSVG');
@@ -876,347 +1140,15 @@ jobs:
           for (let i = 0; i < 65; i++) weatherParticles.push({ x: Math.random() * 1280, y: Math.random() * 720, len: 18 + Math.random() * 18, vy: 14 + Math.random() * 8 });
           spawnTrafficAhead();
 
-          // Draw Natural Scenery (Trees, Palms, Cacti, Snow Pines, Rocks)
           function drawSceneryObject(item, sy) {
             ctx.save();
             ctx.translate(item.x, sy);
-            // Soft ground shadow
             ctx.fillStyle = 'rgba(0,0,0,0.28)';
             ctx.beginPath(); ctx.ellipse(4, 6, item.size * 0.85, item.size * 0.55, 0, 0, Math.PI * 2); ctx.fill();
 
             if (currentThemeIdx === 0) {
-              // Sahara Desert: Dunes, Rocks & Palm/Cactus
               if (item.variant === 0) {
                 ctx.fillStyle = '#15803d';
                 ctx.fillRect(-5, -item.size, 10, item.size * 1.4);
                 ctx.fillRect(-16, -item.size * 0.6, 12, 7);
-                ctx.fillRect(-16, -item.size * 0.9, 7, 14);
-                ctx.fillRect(5, -item.size * 0.4, 11, 7);
-              } else {
-                ctx.fillStyle = '#78350f';
-                ctx.beginPath(); ctx.arc(0, 0, item.size * 0.7, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#92400e';
-                ctx.beginPath(); ctx.arc(-4, -4, item.size * 0.45, 0, Math.PI * 2); ctx.fill();
-              }
-            } else if (currentThemeIdx === 1) {
-              // Amazon Jungle: Multi-layered lush green trees & bushes
-              ctx.fillStyle = '#14532d';
-              ctx.beginPath(); ctx.arc(0, 0, item.size, 0, Math.PI * 2); ctx.fill();
-              ctx.fillStyle = '#16a34a';
-              ctx.beginPath(); ctx.arc(-5, -5, item.size * 0.75, 0, Math.PI * 2); ctx.fill();
-              ctx.fillStyle = '#4ade80';
-              ctx.beginPath(); ctx.arc(-8, -8, item.size * 0.4, 0, Math.PI * 2); ctx.fill();
-            } else if (currentThemeIdx === 2) {
-              // Cyber Night City: Neon Towers & Glowing Streetlights
-              ctx.fillStyle = '#0f172a';
-              ctx.fillRect(-item.size * 0.7, -item.size * 0.7, item.size * 1.4, item.size * 1.4);
-              ctx.strokeStyle = item.variant === 0 ? '#38bdf8' : '#f43f5e';
-              ctx.lineWidth = 3;
-              ctx.strokeRect(-item.size * 0.7, -item.size * 0.7, item.size * 1.4, item.size * 1.4);
-            } else {
-              // Himalaya Snow: Snow-capped Pine Trees & Icy Boulders
-              ctx.fillStyle = '#1e293b';
-              ctx.beginPath(); ctx.arc(0, 0, item.size * 0.85, 0, Math.PI * 2); ctx.fill();
-              ctx.fillStyle = '#f8fafc';
-              ctx.beginPath(); ctx.arc(-3, -3, item.size * 0.6, 0, Math.PI * 2); ctx.fill();
-            }
-            ctx.restore();
-          }
-
-          // Clean, High-Detail Vehicle Canvas Renderer
-          function drawVehicle(sx, sy, v, isPlayer, tilt) {
-            ctx.save(); ctx.translate(sx, sy); ctx.rotate(tilt); ctx.scale(v.scaleW || 1, v.scaleH || 1);
-
-            // Night/Storm Headlight Beams
-            if (currentMoodIdx >= 1) {
-              let g = ctx.createLinearGradient(0, -60, 0, -240);
-              g.addColorStop(0, 'rgba(254, 240, 138, 0.48)'); g.addColorStop(1, 'rgba(254, 240, 138, 0)');
-              ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-22, -60); ctx.lineTo(-68, -240); ctx.lineTo(68, -240); ctx.lineTo(22, -60); ctx.fill();
-            }
-
-            // Drop Shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.45)';
-            ctx.beginPath(); ctx.roundRect(-32, -62, 64, 128, 16); ctx.fill();
-
-            if (v.bodyStyle === 2) {
-              // F1 OPEN-WHEEL HYPERCAR
-              ctx.fillStyle = '#090d16';
-              ctx.beginPath();
-              ctx.roundRect(-36, -48, 12, 26, 4); ctx.roundRect(24, -48, 12, 26, 4);
-              ctx.roundRect(-37, 22, 13, 28, 4); ctx.roundRect(24, 22, 13, 28, 4);
-              ctx.fill();
-
-              // Front Wing
-              ctx.fillStyle = v.accentColor;
-              ctx.beginPath(); ctx.roundRect(-32, -64, 64, 11, 4); ctx.fill();
-
-              // Sculpted F1 Body & Sidepods
-              ctx.fillStyle = v.bodyColor;
-              ctx.beginPath();
-              ctx.moveTo(-8, -64); ctx.lineTo(8, -64);
-              ctx.lineTo(24, -15); ctx.lineTo(22, 52);
-              ctx.lineTo(-22, 52); ctx.lineTo(-24, -15);
-              ctx.closePath(); ctx.fill();
-
-              // Center Nose Stripe
-              ctx.fillStyle = v.stripeColor;
-              ctx.fillRect(-5, -60, 10, 110);
-
-              // Cockpit & Driver Helmet
-              ctx.fillStyle = '#0f172a';
-              ctx.beginPath(); ctx.ellipse(0, 4, 10, 18, 0, 0, Math.PI * 2); ctx.fill();
-              ctx.fillStyle = '#facc15';
-              ctx.beginPath(); ctx.arc(0, 6, 6, 0, Math.PI * 2); ctx.fill();
-
-              // Rear Wing
-              ctx.fillStyle = v.accentColor;
-              ctx.beginPath(); ctx.roundRect(-28, 48, 56, 12, 3); ctx.fill();
-            } else {
-              // SLEEK GT SUPERCAR / SUV / TRUCK
-              ctx.fillStyle = '#090d16';
-              ctx.beginPath();
-              ctx.roundRect(-34, -44, 8, 22, 3); ctx.roundRect(26, -44, 8, 22, 3);
-              ctx.roundRect(-34, 20, 8, 22, 3); ctx.roundRect(26, 20, 8, 22, 3);
-              ctx.fill();
-
-              // Aerodynamic Body
-              ctx.fillStyle = v.bodyColor;
-              ctx.beginPath(); ctx.roundRect(-28, -62, 56, 124, 16); ctx.fill();
-              ctx.strokeStyle = v.stripeColor; ctx.lineWidth = 2;
-              ctx.stroke();
-
-              // Twin Racing Stripe
-              ctx.fillStyle = v.stripeColor;
-              ctx.fillRect(-7, -60, 5, 120);
-              ctx.fillRect(2, -60, 5, 120);
-
-              // Tinted Windshield & Cabin Glass
-              ctx.fillStyle = '#0f172a';
-              ctx.beginPath(); ctx.roundRect(-21, -28, 42, 54, 10); ctx.fill();
-              ctx.fillStyle = v.bodyColor;
-              ctx.beginPath(); ctx.roundRect(-16, -10, 32, 24, 6); ctx.fill();
-
-              // Rear Spoiler
-              ctx.fillStyle = v.accentColor;
-              ctx.beginPath(); ctx.roundRect(-26, 52, 52, 6, 2); ctx.fill();
-            }
-
-            // LED Headlights & Brake Lights
-            ctx.fillStyle = '#fef08a';
-            ctx.fillRect(-22, -62, 10, 4); ctx.fillRect(12, -62, 10, 4);
-            ctx.fillStyle = (isPlayer && brakePressed) ? '#ff0000' : '#ef4444';
-            ctx.fillRect(-22, 58, 12, 4); ctx.fillRect(10, 58, 12, 4);
-
-            // Nitro / Exhaust Flame when accelerating
-            if (isPlayer && gasPressed && speed > 80) {
-              ctx.fillStyle = '#38bdf8';
-              ctx.beginPath(); ctx.arc(-8, 66 + Math.random() * 6, 4, 0, Math.PI * 2); ctx.fill();
-              ctx.beginPath(); ctx.arc(8, 66 + Math.random() * 6, 4, 0, Math.PI * 2); ctx.fill();
-            }
-            ctx.restore();
-          }
-
-          function masterLoop() {
-            const activeCar = carsData[activeCarIndex];
-            const theme = worldThemes[currentThemeIdx];
-            if (isRunning) {
-              if (gasPressed) speed = Math.min(activeCar.topSpeed, speed + activeCar.accel);
-              else speed = Math.max(0, speed - 0.6);
-              if (brakePressed) speed = Math.max(0, speed - 4.2);
-              gear = speed < 2 ? 'N' : Math.min(6, 1 + Math.floor(speed / 42));
-              let step = speed * 0.24;
-              playerWorldY -= step;
-              if (speed > 0.5) totalDistanceMeters += step / 12;
-              if (speed > 1) playerX += steerInput * (6.2 + speed * 0.02);
-              playerX = Math.max(385, Math.min(895, playerX));
-            } else {
-              speed = 75; playerWorldY -= 12;
-            }
-            updateEngineAudio();
-            let playerScreenY = 555 - (gasPressed ? Math.min(80, speed * 0.28) : 20);
-            cameraWorldY = playerWorldY - playerScreenY;
-
-            // 1. Natural Terrain Base
-            ctx.fillStyle = theme.ground1; ctx.fillRect(0, 0, 1280, 720);
-
-            // Natural Ground Patches (Dunes / Grass / Snowdrifts)
-            ctx.fillStyle = theme.ground2;
-            let patchStart = Math.floor(cameraWorldY / 180) * 180;
-            for (let wy = patchStart; wy < cameraWorldY + 900; wy += 180) {
-              let sy = wy - cameraWorldY;
-              ctx.beginPath(); ctx.ellipse(150, sy, 140, 55, 0, 0, Math.PI * 2); ctx.fill();
-              ctx.beginPath(); ctx.ellipse(1130, sy + 90, 140, 55, 0, 0, Math.PI * 2); ctx.fill();
-            }
-
-            // 2. Highway Shoulder & Asphalt
-            ctx.fillStyle = theme.shoulder; ctx.fillRect(322, 0, 636, 720);
-            ctx.fillStyle = theme.road; ctx.fillRect(350, 0, 580, 720);
-
-            // 3. Red & White F1 Rumble Kerbs + Lane Dividers
-            let dashStart = Math.floor(cameraWorldY / 80) * 80;
-            for (let wy = dashStart; wy < cameraWorldY + 800; wy += 80) {
-              let sy = wy - cameraWorldY;
-              // Left & Right Alternating Kerbs
-              ctx.fillStyle = theme.kerb1;
-              ctx.fillRect(336, sy, 14, 40); ctx.fillRect(930, sy, 14, 40);
-              ctx.fillStyle = theme.kerb2;
-              ctx.fillRect(336, sy + 40, 14, 40); ctx.fillRect(930, sy + 40, 14, 40);
-
-              // Highway Lane Markings
-              ctx.fillStyle = '#fde047';
-              ctx.fillRect(492, sy, 6, 42); ctx.fillRect(637, sy, 6, 42); ctx.fillRect(782, sy, 6, 42);
-            }
-
-            // 4. Render & Recycle Natural Roadside Scenery
-            for (let s = 0; s < sceneryItems.length; s++) {
-              let item = sceneryItems[s];
-              let sy = item.worldY - cameraWorldY;
-              if (sy > 820) {
-                item.worldY = cameraWorldY - 120 - Math.random() * 200;
-                item.x = (s % 2 === 0) ? (35 + Math.random() * 245) : (1000 + Math.random() * 245);
-              }
-              drawSceneryObject(item, item.worldY - cameraWorldY);
-            }
-
-            // 5. Render & Update Traffic Cars
-            for (let i = 0; i < trafficCars.length; i++) {
-              let t = trafficCars[i];
-              t.worldY -= t.speed * 0.14;
-              if (t.targetX !== undefined) t.x += (t.targetX - t.x) * 0.1;
-              let sy = t.worldY - cameraWorldY;
-              if (sy > 860) {
-                if (isRunning) { coins += 25; overtakeCount++; }
-                let nl = Math.floor(Math.random() * 4);
-                let nwy = playerWorldY - 760 - Math.random() * 360;
-                trafficCars[i] = createTrafficVehicle(nl, nwy, Math.random() < 0.5);
-                continue;
-              }
-              drawVehicle(t.x, sy, t, false, 0);
-              if (isRunning && Math.abs(playerX - t.x) < 46 && Math.abs(playerScreenY - sy) < 96) {
-                isRunning = false; setGas(false); setBrake(false); playCrashSound(); updateGlobalUI();
-                document.getElementById('crashDistText').innerText = Math.floor(totalDistanceMeters) + 'm';
-                document.getElementById('crashOvertakeText').innerText = overtakeCount;
-                document.getElementById('hudBar').style.display = 'none';
-                document.getElementById('gamepad').style.display = 'none';
-                document.getElementById('gameOverScreen').style.display = 'flex';
-                if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
-              }
-            }
-
-            // 6. Horn Soundwaves
-            for (let h = hornWaves.length - 1; h >= 0; h--) {
-              let hw = hornWaves[h]; hw.radius += 7; hw.alpha -= 0.04;
-              ctx.strokeStyle = 'rgba(253, 224, 71, ' + hw.alpha + ')'; ctx.lineWidth = 4;
-              ctx.beginPath(); ctx.arc(hw.x, hw.y - cameraWorldY, hw.radius, -Math.PI * 0.85, -Math.PI * 0.15); ctx.stroke();
-              if (hw.alpha <= 0) hornWaves.splice(h, 1);
-            }
-
-            // 7. Player Vehicle
-            drawVehicle(playerX, playerScreenY, activeCar, true, steerInput * 0.12);
-
-            // 8. Weather Overlays
-            if (currentMoodIdx >= 1) { ctx.fillStyle = 'rgba(2, 6, 23, 0.42)'; ctx.fillRect(0, 0, 1280, 720); }
-            if (currentMoodIdx >= 2) {
-              ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)'; ctx.lineWidth = 2;
-              weatherParticles.forEach(p => {
-                p.y += p.vy; p.x -= 3; if (p.y > 720) { p.y = -20; p.x = Math.random() * 1280; }
-                ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 4, p.y + p.len); ctx.stroke();
-              });
-              if (currentMoodIdx === 3 && Math.random() < 0.012) lightningAlpha = 0.8;
-              if (lightningAlpha > 0) { ctx.fillStyle = 'rgba(255,255,255,' + lightningAlpha + ')'; ctx.fillRect(0, 0, 1280, 720); lightningAlpha -= 0.08; }
-            }
-
-            if (isRunning) {
-              document.getElementById('uiSpeed').innerText = Math.floor(speed);
-              let speedBar = document.getElementById('uiSpeedBar');
-              if (speedBar) speedBar.style.width = Math.min(100, (speed / activeCar.topSpeed) * 100) + '%';
-              document.getElementById('uiGear').innerText = gear;
-              document.getElementById('uiCoins').innerText = coins;
-              document.getElementById('uiDist').innerText = Math.floor(totalDistanceMeters);
-              document.getElementById('uiOvertakes').innerText = overtakeCount;
-            }
-            requestAnimationFrame(masterLoop);
-          }
-          updateGlobalUI();
-          requestAnimationFrame(masterLoop);
-          </script>
-          </body>
-          </html>
-          EOF
-
-      - name: Configure Gradle & SDK 34
-        run: |
-          cat << 'EOF' > android/app/build.gradle
-          plugins {
-              id 'com.android.application'
-              id 'kotlin-android'
-              id 'dev.flutter.flutter-gradle-plugin'
-          }
-
-          android {
-              namespace = 'com.rahulgupta.speedracer'
-              compileSdk = 34
-              ndkVersion = flutter.ndkVersion
-
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_1_8
-                  targetCompatibility = JavaVersion.VERSION_1_8
-              }
-
-              kotlinOptions {
-                  jvmTarget = '1.8'
-              }
-
-              defaultConfig {
-                  applicationId = 'com.rahulgupta.speedracer'
-                  minSdk = 24
-                  targetSdk = 34
-                  versionCode = 1
-                  versionName = '1.0.0'
-                  multiDexEnabled = true
-              }
-
-              buildTypes {
-                  release {
-                      signingConfig = signingConfigs.debug
-                      minifyEnabled false
-                      shrinkResources false
-                  }
-              }
-          }
-
-          flutter {
-              source = '../..'
-          }
-          EOF
-
-      - name: Configure AdMob & Permissions in AndroidManifest
-        run: |
-          python3 -c "
-          p = 'android/app/src/main/AndroidManifest.xml'
-          s = open(p).read()
-          perms = '<uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\"/>'
-          if 'android.permission.INTERNET' not in s:
-              s = s.replace('<application', perms + '\n    <application', 1)
-          meta = '<meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"ca-app-pub-1590363558146928~3904943143\"/>'
-          if 'com.google.android.gms.ads.APPLICATION_ID' not in s:
-              s = s.replace('</application>', '    ' + meta + '\n    </application>', 1)
-          open(p, 'w').write(s)
-          "
-
-      - name: Fix Kotlin & Gradle Versions
-        run: |
-          find android -name 'settings.gradle' -exec sed -i 's/id \"org.jetbrains.kotlin.android\" version \"[^"]*\"/id \"org.jetbrains.kotlin.android\" version \"1.9.24\"/g' {} +
-          find android -name 'build.gradle' -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: car-racing-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+                ctx.fillRect(-16, -item.size * 0.9, 7,
