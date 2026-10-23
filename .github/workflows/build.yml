@@ -25,24 +25,26 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android command-line tools
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build APK
         run: |
-          if [ -f ./gradlew ]; then
-            chmod +x ./gradlew
-            ./gradlew assembleDebug
-          elif [ -f ./build.gradle ]; then
-            gradle assembleDebug
-          else
-            echo "ERROR: Android Gradle project not found."
-            echo "Repository must contain settings.gradle and app/build.gradle."
+          if [ ! -f "./gradlew" ]; then
+            echo "ERROR: gradlew not found. Android Gradle project is required."
             exit 1
           fi
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: game-apk
-          path: |
-            app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
