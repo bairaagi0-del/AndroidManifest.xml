@@ -1,641 +1,877 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Apex Turbo F1 - Ultimate Edition</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #030712; font-family: system-ui, -apple-system, sans-serif; }
-    #gameContainer { position: relative; width: 100vw; height: 100vh; background: #030712; overflow: hidden; }
-    canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
-    
-    .screen { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; background: radial-gradient(circle at center, rgba(15, 23, 42, 0.78) 0%, rgba(3, 7, 18, 0.95) 100%); backdrop-filter: blur(8px); }
-    .title-animated { font-size: clamp(26px, 5vw, 48px); font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase; font-style: italic; text-shadow: 0 0 25px rgba(239, 68, 68, 0.9), 0 4px 12px #000; text-align: center; }
-    
-    .arcade-btn { background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); border: 2px solid #fde047; color: #fff; font-size: 13px; font-weight: 900; padding: 10px 22px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 0 #78350f, 0 8px 16px rgba(0,0,0,0.8); text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-    .arcade-btn:active { transform: translateY(3px); }
-    .btn-green { background: linear-gradient(180deg, #10b981 0%, #047857 100%); border-color: #6ee7b7; box-shadow: 0 4px 0 #064e3b; }
-    .btn-blue { background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border-color: #7dd3fc; box-shadow: 0 4px 0 #0c4a6e; }
-    .btn-purple { background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%); border-color: #c4b5fd; box-shadow: 0 4px 0 #4c1d95; }
-    .btn-red { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); border-color: #fca5a5; box-shadow: 0 4px 0 #7f1d1d; }
+name: Build Car Racing Release APK
 
-    .hud-bar { position: absolute; top: 10px; left: 14px; right: 14px; display: none; justify-content: space-between; align-items: center; z-index: 30; pointer-events: none; gap: 8px; }
-    .hud-cluster { display: flex; align-items: center; gap: 8px; }
-    .hud-card { background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(56, 189, 248, 0.4); border-bottom: 3px solid #0284c7; color: #f8fafc; padding: 5px 12px; border-radius: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 15px rgba(0,0,0,0.7); }
-    .hud-exit-btn { pointer-events: auto; cursor: pointer; background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%); border: 2px solid #fca5a5; color: #fff; font-weight: 900; font-size: 12px; padding: 8px 14px; border-radius: 12px; box-shadow: 0 4px 12px rgba(239,68,68,0.5); }
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-    .gamepad { position: absolute; bottom: 14px; left: 18px; right: 18px; display: none; justify-content: space-between; align-items: flex-end; z-index: 30; pointer-events: none; }
-    .pad-cluster { display: flex; gap: 14px; pointer-events: auto; align-items: flex-end; }
-    .horn-btn { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 3px solid #fde047; color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #78350f; cursor: pointer; margin-bottom: 8px; }
-    
-    .car-pedal { position: relative; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.9); }
-    .pedal-accel { width: 58px; height: 124px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
-    .pedal-accel.pressed { transform: scaleY(0.92); border-color: #10b981; box-shadow: 0 0 18px #10b981; }
-    .pedal-brake-real { width: 70px; height: 86px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
-    .pedal-brake-real.pressed { transform: scaleY(0.92); border-color: #ef4444; box-shadow: 0 0 18px #ef4444; }
-    .pedal-grip { width: 80%; height: 7px; background: #090d16; border-radius: 4px; }
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-    #steeringHandleWrap { width: 140px; height: 115px; position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
-    .steer-btn { width: 62px; height: 62px; border-radius: 50%; background: #1e293b; border: 3px solid #64748b; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; }
-    
-    .garage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 56vh; overflow-y: auto; width: 100%; max-width: 880px; padding: 10px; touch-action: pan-y; }
-    .car-card { background: #1e293b; border: 2px solid #334155; border-radius: 16px; padding: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; }
-    .car-card.selected { border-color: #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    #customModal { position: absolute; inset: 0; background: rgba(3, 7, 18, 0.92); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-  </style>
-</head>
-<body>
-  <div id="gameContainer">
-    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-    <!-- HOME SCREEN -->
-    <div id="homeScreen" class="screen">
-      <div class="flex items-center gap-3 bg-slate-900/90 border border-red-500/50 px-4 py-1.5 rounded-full mb-2 shadow-lg">
-        <svg width="36" height="20" viewBox="0 0 120 60"><circle cx="60" cy="30" r="22" fill="#facc15"/><path d="M12 38 L42 22 L55 32 L38 44 Z" fill="#ef4444"/><path d="M108 38 L78 22 L65 32 L82 44 Z" fill="#ef4444"/></svg>
-        <span class="text-xs font-black tracking-widest text-amber-400 uppercase">RED BULL F1 TURBO CHAMPIONSHIP</span>
-      </div>
-      <div class="title-animated">APEX TURBO F1 & GT</div>
-      <div id="homeCarPreview" class="my-2 w-32 h-24 flex items-center justify-center filter drop-shadow-[0_10px_20px_rgba(245,158,11,0.5)]"></div>
-      
-      <div class="flex flex-wrap items-center justify-center gap-2 my-2">
-        <button class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleTheme()">🌍 <span id="homeThemeLabel">SAHARA DESERT</span></button>
-        <button class="arcade-btn btn-purple" style="padding:6px 14px; font-size:11px;" onclick="cycleMood()">🌦️ <span id="homeMoodLabel">SUNNY DAY</span></button>
-      </div>
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+          channel: 'stable'
 
-      <div class="flex flex-wrap items-center justify-center gap-3 my-3">
-        <button class="arcade-btn btn-green" onclick="startGameSession()">🏁 START RACE</button>
-        <button class="arcade-btn btn-blue" onclick="openGarage()">🏎️ 50 CARS</button>
-        <button class="arcade-btn btn-purple" onclick="openSettings()">⚙️ CONTROLS</button>
-        <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red" style="text-decoration:none;">▶️ @THEGOVINDGUPTA</a>
-      </div>
-    </div>
+      - name: Write Clean pubspec.yaml
+        run: |
+          cat << 'EOF' > pubspec.yaml
+          name: speedracer
+          description: Apex Turbo F1 Highway Racing
+          publish_to: 'none'
+          version: 1.0.0+1
 
-    <!-- GARAGE SCREEN -->
-    <div id="garageScreen" class="screen" style="display:none;">
-      <div class="flex items-center justify-between w-full max-w-4xl mb-2">
-        <button class="arcade-btn" style="padding:6px 16px;" onclick="closeGarage()">◀ BACK</button>
-        <div class="title-animated" style="font-size:20px;">50 HYPERCARS & TRUCKS</div>
-        <div class="hud-card"><span class="text-emerald-400 font-black">🪙 <span id="garageCoins">1200</span></span></div>
-      </div>
-      <div id="garageGrid" class="garage-grid"></div>
-    </div>
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
 
-    <!-- SETTINGS SCREEN -->
-    <div id="settingsScreen" class="screen" style="display:none;">
-      <div class="title-animated" style="font-size:24px; margin-bottom:12px;">F1 COCKPIT SETTINGS</div>
-      <div class="bg-slate-900/95 border-2 border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col gap-3">
-        <div class="flex justify-between items-center text-white font-bold text-sm"><span>🛞 STEERING MODE</span><button id="controlModeBtn" class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleControlMode()">F1 YOKE HANDLE</button></div>
-        <div class="flex justify-between items-center text-white font-bold text-sm"><span>🔊 ENGINE & MUSIC</span><button id="audioToggleBtn" class="arcade-btn btn-green" style="padding:6px 14px; font-size:11px;" onclick="toggleAudio()">ON</button></div>
-        <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red w-full justify-center" style="text-decoration:none;">📺 SUBSCRIBE @THEGOVINDGUPTA</a>
-      </div>
-      <button class="arcade-btn mt-4" onclick="closeSettings()">◀ BACK</button>
-    </div>
+          dependencies:
+            flutter:
+              sdk: flutter
+            webview_flutter: ^4.8.0
+            google_mobile_ads: ^5.1.0
 
-    <!-- HUD BAR -->
-    <div id="hudBar" class="hud-bar">
-      <div class="hud-cluster">
-        <button class="hud-exit-btn" onclick="backToHome()">◀ HOME</button>
-        <div class="hud-card"><span class="text-sky-400 font-black text-base" id="uiSpeed">0</span><span class="text-[10px] text-slate-400">KM/H</span><div class="w-12 h-2 bg-slate-800 rounded-full overflow-hidden"><div id="uiSpeedBar" class="h-full bg-sky-400" style="width:0%;"></div></div></div>
-        <div class="hud-card"><span class="text-[10px] text-slate-400">GEAR</span><span id="uiGear" class="text-amber-400 font-black text-base">1</span></div>
-      </div>
-      <div class="hud-cluster">
-        <div class="hud-card"><span class="text-[10px] text-slate-400">PASS</span><span id="uiOvertakes" class="text-purple-400 font-black text-base">0</span></div>
-        <div class="hud-card"><span id="uiDist" class="text-amber-300 font-black text-base">0</span><span class="text-[10px] text-slate-400">m</span></div>
-        <div class="hud-card">🪙 <span id="uiCoins" class="text-emerald-400 font-black text-base">1200</span></div>
-      </div>
-    </div>
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/index.html
+          EOF
 
-    <!-- GAMEPAD -->
-    <div id="gamepad" class="gamepad">
-      <div class="pad-cluster">
-        <div id="steeringHandleWrap">
+      - name: Recreate Android Project Structure
+        run: flutter create . --org com.rahulgupta --project-name speedracer
+
+      - name: Fix Android Gradle Properties & Wrapper
+        run: |
+          echo "android.useAndroidX=true" > android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4G -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
+          mkdir -p android/gradle/wrapper
+          cat << 'EOF' > android/gradle/wrapper/gradle-wrapper.properties
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=gradle/wrapper
+          EOF
+
+      - name: Write Clean lib/main.dart
+        run: |
+          mkdir -p lib
+          cat << 'EOF' > lib/main.dart
+          import 'dart:async';
+          import 'package:flutter/material.dart';
+          import 'package:flutter/services.dart';
+          import 'package:webview_flutter/webview_flutter.dart';
+          import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+          void main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+            await MobileAds.instance.initialize();
+            SystemChrome.setPreferredOrientations([
+              DeviceOrientation.landscapeLeft,
+              DeviceOrientation.landscapeRight,
+            ]);
+            SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+            runApp(const MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: CarRacingApp(),
+            ));
+          }
+
+          class CarRacingApp extends StatefulWidget {
+            const CarRacingApp({super.key});
+            @override
+            State<CarRacingApp> createState() => _CarRacingState();
+          }
+
+          class _CarRacingState extends State<CarRacingApp> {
+            late final WebViewController _controller;
+            BannerAd? _bannerAd;
+            bool _isBannerReady = false;
+            RewardedAd? _rewardedAd;
+            InterstitialAd? _interstitialAd;
+
+            final String _realBannerId = 'ca-app-pub-1590363558146928/9630631281';
+            final String _realInterstitialId = 'ca-app-pub-1590363558146928/7196039630';
+            final String _realRewardedId = 'ca-app-pub-1590363558146928/2274885449';
+
+            @override
+            void initState() {
+              super.initState();
+              _loadBannerAd();
+              _loadInterstitialAd();
+              _loadRewardedAd();
+
+              _controller = WebViewController()
+                ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                ..setBackgroundColor(const Color(0xFF030712))
+                ..addJavaScriptChannel(
+                  'AdMobBridge',
+                  onMessageReceived: (JavaScriptMessage message) {
+                    if (message.message == 'showInterstitial') {
+                      _showInterstitialAd();
+                    } else if (message.message == 'showRewarded') {
+                      _showRewardedAd();
+                    }
+                  },
+                );
+              _initWebView();
+            }
+
+            Future<void> _initWebView() async {
+              await _controller.clearCache();
+              await _controller.loadFlutterAsset('assets/index.html');
+            }
+
+            void _loadBannerAd() {
+              _bannerAd = BannerAd(
+                adUnitId: _realBannerId,
+                request: const AdRequest(),
+                size: AdSize.banner,
+                listener: BannerAdListener(
+                  onAdLoaded: (ad) { setState(() { _isBannerReady = true; }); },
+                  onAdFailedToLoad: (ad, err) {
+                    ad.dispose();
+                    setState(() { _isBannerReady = false; });
+                    Future.delayed(const Duration(seconds: 6), _loadBannerAd);
+                  },
+                ),
+              )..load();
+            }
+
+            void _loadInterstitialAd() {
+              InterstitialAd.load(
+                adUnitId: _realInterstitialId,
+                request: const AdRequest(),
+                adLoadCallback: InterstitialAdLoadCallback(
+                  onAdLoaded: (ad) { _interstitialAd = ad; },
+                  onAdFailedToLoad: (error) { _interstitialAd = null; Future.delayed(const Duration(seconds: 6), _loadInterstitialAd); },
+                ),
+              );
+            }
+
+            void _showInterstitialAd() {
+              if (_interstitialAd != null) {
+                _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+                  onAdDismissedFullScreenContent: (ad) { ad.dispose(); _interstitialAd = null; _loadInterstitialAd(); },
+                  onAdFailedToShowFullScreenContent: (ad, error) { ad.dispose(); _interstitialAd = null; _loadInterstitialAd(); },
+                );
+                _interstitialAd!.show();
+                _interstitialAd = null;
+              } else {
+                _loadInterstitialAd();
+              }
+            }
+
+            void _loadRewardedAd() {
+              RewardedAd.load(
+                adUnitId: _realRewardedId,
+                request: const AdRequest(),
+                rewardedAdLoadCallback: RewardedAdLoadCallback(
+                  onAdLoaded: (ad) { _rewardedAd = ad; },
+                  onAdFailedToLoad: (error) { _rewardedAd = null; Future.delayed(const Duration(seconds: 5), _loadRewardedAd); },
+                ),
+              );
+            }
+
+            void _showRewardedAd() {
+              if (_rewardedAd != null) {
+                _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+                  onAdDismissedFullScreenContent: (ad) { ad.dispose(); _rewardedAd = null; _loadRewardedAd(); },
+                  onAdFailedToShowFullScreenContent: (ad, error) { ad.dispose(); _rewardedAd = null; _loadRewardedAd(); },
+                );
+                _rewardedAd!.show(
+                  onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+                    _controller.runJavaScript('if(window.onRewardedAdReward) window.onRewardedAdReward();');
+                  },
+                );
+                _rewardedAd = null;
+              } else {
+                _loadRewardedAd();
+              }
+            }
+
+            @override
+            void dispose() {
+              _bannerAd?.dispose();
+              _interstitialAd?.dispose();
+              _rewardedAd?.dispose();
+              super.dispose();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                backgroundColor: const Color(0xFF030712),
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      Expanded(child: WebViewWidget(controller: _controller)),
+                      if (_isBannerReady && _bannerAd != null)
+                        Container(
+                          color: Colors.black,
+                          width: _bannerAd!.size.width.toDouble(),
+                          height: _bannerAd!.size.height.toDouble(),
+                          child: AdWidget(ad: _bannerAd!),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          }
+          EOF
+
+      - name: Create Apex Turbo F1 HTML Engine
+        run: |
+          mkdir -p assets
+          cat << 'EOF' > assets/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+          <title>Apex Turbo F1 - Ultimate Edition</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+          * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; touch-action: none; }
+          html, body { width: 100%; height: 100%; overflow: hidden; background: #030712; font-family: system-ui, -apple-system, sans-serif; }
+          #gameContainer { position: relative; width: 100vw; height: 100vh; background: #030712; overflow: hidden; }
+          canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+          .screen { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; background: radial-gradient(circle at center, rgba(15, 23, 42, 0.78) 0%, rgba(3, 7, 18, 0.95) 100%); backdrop-filter: blur(8px); }
+          .title-animated { font-size: clamp(26px, 5vw, 48px); font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase; font-style: italic; text-shadow: 0 0 25px rgba(239, 68, 68, 0.9), 0 4px 12px #000; text-align: center; }
+          .arcade-btn { background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); border: 2px solid #fde047; color: #fff; font-size: 13px; font-weight: 900; padding: 10px 22px; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 0 #78350f, 0 8px 16px rgba(0,0,0,0.8); text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+          .arcade-btn:active { transform: translateY(3px); }
+          .btn-green { background: linear-gradient(180deg, #10b981 0%, #047857 100%); border-color: #6ee7b7; box-shadow: 0 4px 0 #064e3b; }
+          .btn-blue { background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border-color: #7dd3fc; box-shadow: 0 4px 0 #0c4a6e; }
+          .btn-purple { background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%); border-color: #c4b5fd; box-shadow: 0 4px 0 #4c1d95; }
+          .btn-red { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); border-color: #fca5a5; box-shadow: 0 4px 0 #7f1d1d; }
+          .hud-bar { position: absolute; top: 10px; left: 14px; right: 14px; display: none; justify-content: space-between; align-items: center; z-index: 30; pointer-events: none; gap: 8px; }
+          .hud-cluster { display: flex; align-items: center; gap: 8px; }
+          .hud-card { background: rgba(15, 23, 42, 0.9); border: 1.5px solid rgba(56, 189, 248, 0.4); border-bottom: 3px solid #0284c7; color: #f8fafc; padding: 5px 12px; border-radius: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 15px rgba(0,0,0,0.7); }
+          .hud-exit-btn { pointer-events: auto; cursor: pointer; background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%); border: 2px solid #fca5a5; color: #fff; font-weight: 900; font-size: 12px; padding: 8px 14px; border-radius: 12px; box-shadow: 0 4px 12px rgba(239,68,68,0.5); }
+          .gamepad { position: absolute; bottom: 14px; left: 18px; right: 18px; display: none; justify-content: space-between; align-items: flex-end; z-index: 30; pointer-events: none; }
+          .pad-cluster { display: flex; gap: 14px; pointer-events: auto; align-items: flex-end; }
+          .horn-btn { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle, #f59e0b 0%, #b45309 100%); border: 3px solid #fde047; color: #fff; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #78350f; cursor: pointer; margin-bottom: 8px; }
+          .car-pedal { position: relative; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.9); }
+          .pedal-accel { width: 58px; height: 124px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
+          .pedal-accel.pressed { transform: scaleY(0.92); border-color: #10b981; box-shadow: 0 0 18px #10b981; }
+          .pedal-brake-real { width: 70px; height: 86px; background: linear-gradient(180deg, #475569 0%, #0f172a 100%); border: 3px solid #94a3b8; }
+          .pedal-brake-real.pressed { transform: scaleY(0.92); border-color: #ef4444; box-shadow: 0 0 18px #ef4444; }
+          .pedal-grip { width: 80%; height: 7px; background: #090d16; border-radius: 4px; }
+          #steeringHandleWrap { width: 140px; height: 115px; position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+          .steer-btn { width: 62px; height: 62px; border-radius: 50%; background: #1e293b; border: 3px solid #64748b; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+          .garage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; max-height: 56vh; overflow-y: auto; width: 100%; max-width: 880px; padding: 10px; touch-action: pan-y; }
+          .car-card { background: #1e293b; border: 2px solid #334155; border-radius: 16px; padding: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+          .car-card.selected { border-color: #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+          #customModal { position: absolute; inset: 0; background: rgba(3, 7, 18, 0.92); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+          </style>
+          </head>
+          <body>
+          <div id="gameContainer">
+          <canvas id="gameCanvas" width="1280" height="720"></canvas>
+          <div id="homeScreen" class="screen">
+          <div class="flex items-center gap-3 bg-slate-900/90 border border-red-500/50 px-4 py-1.5 rounded-full mb-2 shadow-lg">
+          <svg width="36" height="20" viewBox="0 0 120 60"><circle cx="60" cy="30" r="22" fill="#facc15"/><path d="M12 38 L42 22 L55 32 L38 44 Z" fill="#ef4444"/><path d="M108 38 L78 22 L65 32 L82 44 Z" fill="#ef4444"/></svg>
+          <span class="text-xs font-black tracking-widest text-amber-400 uppercase">RED BULL F1 TURBO CHAMPIONSHIP</span>
+          </div>
+          <div class="title-animated">APEX TURBO F1 & GT</div>
+          <div id="homeCarPreview" class="my-2 w-32 h-24 flex items-center justify-center filter drop-shadow-[0_10px_20px_rgba(245,158,11,0.5)]"></div>
+          <div class="flex flex-wrap items-center justify-center gap-2 my-2">
+          <button class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleTheme()">🌍 <span id="homeThemeLabel">SAHARA DESERT</span></button>
+          <button class="arcade-btn btn-purple" style="padding:6px 14px; font-size:11px;" onclick="cycleMood()">🌦️ <span id="homeMoodLabel">SUNNY DAY</span></button>
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-3 my-3">
+          <button class="arcade-btn btn-green" onclick="startGameSession()">🏁 START RACE</button>
+          <button class="arcade-btn btn-blue" onclick="openGarage()">🏎️ 50 CARS</button>
+          <button class="arcade-btn btn-purple" onclick="openSettings()">⚙️ CONTROLS</button>
+          <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red" style="text-decoration:none;">▶️ @THEGOVINDGUPTA</a>
+          </div>
+          </div>
+          <div id="garageScreen" class="screen" style="display:none;">
+          <div class="flex items-center justify-between w-full max-w-4xl mb-2">
+          <button class="arcade-btn" style="padding:6px 16px;" onclick="closeGarage()">◀ BACK</button>
+          <div class="title-animated" style="font-size:20px;">50 HYPERCARS & TRUCKS</div>
+          <div class="hud-card"><span class="text-emerald-400 font-black">🪙 <span id="garageCoins">1200</span></span></div>
+          </div>
+          <div id="garageGrid" class="garage-grid"></div>
+          </div>
+          <div id="settingsScreen" class="screen" style="display:none;">
+          <div class="title-animated" style="font-size:24px; margin-bottom:12px;">F1 COCKPIT SETTINGS</div>
+          <div class="bg-slate-900/95 border-2 border-slate-700 rounded-3xl p-5 w-full max-w-md flex flex-col gap-3">
+          <div class="flex justify-between items-center text-white font-bold text-sm"><span>🛞 STEERING MODE</span><button id="controlModeBtn" class="arcade-btn btn-blue" style="padding:6px 14px; font-size:11px;" onclick="cycleControlMode()">F1 YOKE HANDLE</button></div>
+          <div class="flex justify-between items-center text-white font-bold text-sm"><span>🔊 ENGINE & MUSIC</span><button id="audioToggleBtn" class="arcade-btn btn-green" style="padding:6px 14px; font-size:11px;" onclick="toggleAudio()">ON</button></div>
+          <a href="https://youtube.com/@thegovindgupta?si=kD0pUJB_E5iTp2_Z" target="_blank" class="arcade-btn btn-red w-full justify-center" style="text-decoration:none;">📺 SUBSCRIBE @THEGOVINDGUPTA</a>
+          </div>
+          <button class="arcade-btn mt-4" onclick="closeSettings()">◀ BACK</button>
+          </div>
+          <div id="hudBar" class="hud-bar">
+          <div class="hud-cluster">
+          <button class="hud-exit-btn" onclick="backToHome()">◀ HOME</button>
+          <div class="hud-card"><span class="text-sky-400 font-black text-base" id="uiSpeed">0</span><span class="text-[10px] text-slate-400">KM/H</span><div class="w-12 h-2 bg-slate-800 rounded-full overflow-hidden"><div id="uiSpeedBar" class="h-full bg-sky-400" style="width:0%;"></div></div></div>
+          <div class="hud-card"><span class="text-[10px] text-slate-400">GEAR</span><span id="uiGear" class="text-amber-400 font-black text-base">1</span></div>
+          </div>
+          <div class="hud-cluster">
+          <div class="hud-card"><span class="text-[10px] text-slate-400">PASS</span><span id="uiOvertakes" class="text-purple-400 font-black text-base">0</span></div>
+          <div class="hud-card"><span id="uiDist" class="text-amber-300 font-black text-base">0</span><span class="text-[10px] text-slate-400">m</span></div>
+          <div class="hud-card">🪙 <span id="uiCoins" class="text-emerald-400 font-black text-base">1200</span></div>
+          </div>
+          </div>
+          <div id="gamepad" class="gamepad">
+          <div class="pad-cluster">
+          <div id="steeringHandleWrap">
           <svg id="steeringWheelSVG" viewBox="0 0 140 110" class="w-full h-full filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
-            <rect x="10" y="18" width="120" height="74" rx="18" fill="none" stroke="#0f172a" stroke-width="12"/>
-            <rect x="10" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
-            <rect x="112" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
-            <rect x="36" y="42" width="68" height="28" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-            <circle cx="55" cy="56" r="4" fill="#10b981"/><circle cx="70" cy="56" r="4" fill="#f59e0b"/><circle cx="85" cy="56" r="4" fill="#ef4444"/>
+          <rect x="10" y="18" width="120" height="74" rx="18" fill="none" stroke="#0f172a" stroke-width="12"/>
+          <rect x="10" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
+          <rect x="112" y="28" width="18" height="54" rx="6" fill="#ef4444"/>
+          <rect x="36" y="42" width="68" height="28" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+          <circle cx="55" cy="56" r="4" fill="#10b981"/><circle cx="70" cy="56" r="4" fill="#f59e0b"/><circle cx="85" cy="56" r="4" fill="#ef4444"/>
           </svg>
-        </div>
-        <div id="buttonSteerWrap" style="display:none; gap:12px;">
+          </div>
+          <div id="buttonSteerWrap" style="display:none; gap:12px;">
           <div class="steer-btn" onpointerdown="setSteer(-1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">◀</div>
           <div class="steer-btn" onpointerdown="setSteer(1)" onpointerup="setSteer(0)" onpointerleave="setSteer(0)">▶</div>
-        </div>
-        <div id="hornBtnEl" class="horn-btn" onpointerdown="triggerCarHorn(true)" onpointerup="triggerCarHorn(false)">📢</div>
-      </div>
-      <div class="pad-cluster">
-        <div id="brakePedalEl" class="car-pedal pedal-brake-real" onpointerdown="setBrake(true)" onpointerup="setBrake(false)" onpointerleave="setBrake(false)"><div class="w-3 h-3 rounded-full bg-red-500"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
-        <div id="accelPedalEl" class="car-pedal pedal-accel" onpointerdown="setGas(true)" onpointerup="setGas(false)" onpointerleave="setGas(false)"><div class="w-3 h-3 rounded-full bg-emerald-400"></div><div class="pedal-grip"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
-      </div>
-    </div>
-
-    <!-- GAMEOVER SCREEN -->
-    <div id="gameOverScreen" class="screen" style="display:none;">
-      <div class="bg-slate-900/95 border-2 border-red-500 rounded-3xl p-6 max-w-md w-full text-center flex flex-col items-center shadow-2xl">
-        <div class="text-4xl mb-1 animate-bounce">💥</div>
-        <div class="title-animated" style="color:#ef4444; font-size:28px;">HIGHWAY CRASH!</div>
-        <div class="text-slate-300 text-xs font-bold my-2 bg-slate-950 px-3 py-1.5 rounded-xl">🏁 DIST: <span id="crashDistText" class="text-amber-400">0m</span> • 🏎️ PASSES: <span id="crashOvertakeText" class="text-purple-400">0</span></div>
-        <button class="arcade-btn btn-purple w-full my-2" onclick="watchAdToRevive()">🎬 WATCH AD & REVIVE</button>
-        <div class="flex gap-3 w-full mt-2">
+          </div>
+          <div id="hornBtnEl" class="horn-btn" onpointerdown="triggerCarHorn(true)" onpointerup="triggerCarHorn(false)">📢</div>
+          </div>
+          <div class="pad-cluster">
+          <div id="brakePedalEl" class="car-pedal pedal-brake-real" onpointerdown="setBrake(true)" onpointerup="setBrake(false)" onpointerleave="setBrake(false)"><div class="w-3 h-3 rounded-full bg-red-500"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
+          <div id="accelPedalEl" class="car-pedal pedal-accel" onpointerdown="setGas(true)" onpointerup="setGas(false)" onpointerleave="setGas(false)"><div class="w-3 h-3 rounded-full bg-emerald-400"></div><div class="pedal-grip"></div><div class="pedal-grip"></div><div class="pedal-grip"></div></div>
+          </div>
+          </div>
+          <div id="gameOverScreen" class="screen" style="display:none;">
+          <div class="bg-slate-900/95 border-2 border-red-500 rounded-3xl p-6 max-w-md w-full text-center flex flex-col items-center shadow-2xl">
+          <div class="text-4xl mb-1 animate-bounce">💥</div>
+          <div class="title-animated" style="color:#ef4444; font-size:28px;">HIGHWAY CRASH!</div>
+          <div class="text-slate-300 text-xs font-bold my-2 bg-slate-950 px-3 py-1.5 rounded-xl">🏁 DIST: <span id="crashDistText" class="text-amber-400">0m</span> • 🏎️ PASSES: <span id="crashOvertakeText" class="text-purple-400">0</span></div>
+          <button class="arcade-btn btn-purple w-full my-2" onclick="watchAdToRevive()">🎬 WATCH AD & REVIVE</button>
+          <div class="flex gap-3 w-full mt-2">
           <button class="arcade-btn btn-green flex-1" onclick="startGameSession()">🔄 RETRY</button>
           <button class="arcade-btn flex-1" onclick="backToHome()">🏠 HOME</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- AD & REWARD MODAL -->
-    <div id="customModal">
-      <div class="bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl text-center max-w-sm w-full shadow-2xl">
-        <div id="modalTitle" class="text-amber-400 font-black text-lg mb-2">SPONSORED REWARD AD</div>
-        <div class="text-slate-300 text-xs mb-3">Watch ad counting to claim your reward!</div>
-        <div id="adCountdown" class="text-4xl font-black text-white my-3">5s</div>
-        <div class="flex gap-3 justify-center">
+          </div>
+          </div>
+          </div>
+          <div id="customModal">
+          <div class="bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl text-center max-w-sm w-full shadow-2xl">
+          <div id="modalTitle" class="text-amber-400 font-black text-lg mb-2">SPONSORED REWARD AD</div>
+          <div class="text-slate-300 text-xs mb-3">Watch ad counting to claim your reward!</div>
+          <div id="adCountdown" class="text-4xl font-black text-white my-3">5s</div>
+          <div class="flex gap-3 justify-center">
           <button id="modalActionBtn" class="arcade-btn btn-green" style="display:none;" onclick="resolveAdReward()">🎁 CLAIM REWARD</button>
           <button id="modalCloseBtn" class="arcade-btn btn-red" onclick="closeModal()">✖ CANCEL</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let coins = parseInt(localStorage.getItem('apex_coins_v4') || '1200');
-    let activeCarIndex = parseInt(localStorage.getItem('apex_car_v4') || '0');
-    let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v4') || '[0]');
-    let audioEnabled = true;
-    let controlMode = 'handle';
-    let isRunning = false;
-    let playerX = 565;
-    let playerWorldY = 0;
-    let totalDistanceMeters = 0;
-    let overtakeCount = 0;
-    let cameraWorldY = -560;
-    let speed = 0;
-    let gear = 1;
-    let steerInput = 0;
-    let gasPressed = false;
-    let brakePressed = false;
-    let lanePositions = [420, 565, 715, 860];
-    let trafficCars = [];
-    let hornWaves = [];
-    let weatherParticles = [];
-    let lightningAlpha = 0;
-
-    const worldThemes = [
-      { id: 'desert', name: 'SAHARA DESERT', ground1: '#d97706', ground2: '#f59e0b', road: '#1e293b', shoulder: '#78350f' },
-      { id: 'jungle', name: 'AMAZON JUNGLE', ground1: '#14532d', ground2: '#166534', road: '#1e293b', shoulder: '#3f6212' },
-      { id: 'city', name: 'CYBER NIGHT CITY', ground1: '#090d16', ground2: '#1e1b4b', road: '#0f172a', shoulder: '#38bdf8' },
-      { id: 'snow', name: 'HIMALAYA SNOW', ground1: '#cbd5e1', ground2: '#f8fafc', road: '#334155', shoulder: '#94a3b8' }
-    ];
-    let currentThemeIdx = 0;
-    const weatherMoods = ['SUNNY DAY', 'MIDNIGHT', 'HEAVY RAIN', 'THUNDER STORM'];
-    let currentMoodIdx = 0;
-
-    const vehicleCategories = [
-      { typeId: 0, className: 'MINI HATCH', prefix: 'Mini Cooper S', scaleW: 0.85, scaleH: 0.8 },
-      { typeId: 1, className: 'FORD MUSCLE', prefix: 'Mustang GT', scaleW: 1.0, scaleH: 1.0 },
-      { typeId: 2, className: 'F1 HYPERCAR', prefix: 'RedBull RB20', scaleW: 1.02, scaleH: 1.04 },
-      { typeId: 3, className: 'RAPTOR PICKUP', prefix: 'Ford F-150', scaleW: 1.08, scaleH: 1.12 },
-      { typeId: 4, className: 'MONSTER SUV', prefix: 'Defender 4x4', scaleW: 1.1, scaleH: 1.06 },
-      { typeId: 5, className: 'JUMBO TRUCK', prefix: 'Titan Semi', scaleW: 1.24, scaleH: 1.36 }
-    ];
-
-    const carPalettes = [
-      { body: '#ef4444', stripe: '#fde047', accent: '#991b1b' },
-      { body: '#0284c7', stripe: '#ffffff', accent: '#0c4a6e' },
-      { body: '#10b981', stripe: '#064e3b', accent: '#047857' },
-      { body: '#f59e0b', stripe: '#0f172a', accent: '#b45309' },
-      { body: '#8b5cf6', stripe: '#ddd6fe', accent: '#4c1d95' },
-      { body: '#ec4899', stripe: '#fbcfe8', accent: '#831843' }
-    ];
-
-    let carsData = [];
-    for (let i = 0; i < 50; i++) {
-      let pal = carPalettes[i % carPalettes.length];
-      let cat = vehicleCategories[i % vehicleCategories.length];
-      carsData.push({ id: i, name: cat.prefix + ' #' + (i + 1), categoryLabel: cat.className, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, topSpeed: 205 + i * 3, accel: 1.25 + i * 0.025, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, price: i === 0 ? 0 : i * 350 });
-    }
-
-    let audioCtx = null;
-    let engineOsc = null;
-    let engineGain = null;
-    let musicTimer = null;
-    let musicStep = 0;
-
-    function ensureAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function startEngineAudio() {
-      if (!audioEnabled) return;
-      try {
-        ensureAudio();
-        if (engineOsc) return;
-        engineOsc = audioCtx.createOscillator();
-        engineGain = audioCtx.createGain();
-        engineOsc.type = 'sawtooth';
-        engineOsc.frequency.value = 55;
-        engineGain.gain.value = 0.001;
-        engineOsc.connect(engineGain);
-        engineGain.connect(audioCtx.destination);
-        engineOsc.start();
-      } catch (e) {}
-    }
-
-    function updateEngineAudio() {
-      if (!engineOsc || !engineGain) return;
-      if (!isRunning || !audioEnabled) {
-        engineGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.08);
-        return;
-      }
-      let rpmFreq = 52 + (speed * 0.85) + (gasPressed ? 28 : 0);
-      let vol = gasPressed ? 0.085 : (speed > 5 ? 0.035 : 0.012);
-      engineOsc.frequency.setTargetAtTime(rpmFreq, audioCtx.currentTime, 0.05);
-      engineGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.06);
-    }
-
-    function playCrashSound() {
-      if (!audioEnabled) return;
-      try {
-        ensureAudio();
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(140, now);
-        osc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
-        g.gain.setValueAtTime(0.28, now);
-        g.gain.exponentialRampToValueAtTime(0.005, now + 0.45);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.45);
-      } catch (e) {}
-    }
-
-    function startHomeMusic() {
-      stopHomeMusic();
-      if (!audioEnabled || isRunning) return;
-      const notes = [146.83, 174.61, 220.0, 261.63, 293.66, 261.63, 220.0, 174.61];
-      musicTimer = setInterval(() => {
-        if (isRunning || !audioEnabled || !audioCtx || audioCtx.state !== 'running') return;
-        try {
-          const now = audioCtx.currentTime;
-          const osc = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(notes[musicStep % notes.length], now);
-          g.gain.setValueAtTime(0.035, now);
-          g.gain.exponentialRampToValueAtTime(0.002, now + 0.16);
-          osc.connect(g); g.connect(audioCtx.destination);
-          osc.start(now); osc.stop(now + 0.16);
-          musicStep++;
-        } catch (e) {}
-      }, 180);
-    }
-    function stopHomeMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
-    window.addEventListener('pointerdown', () => { ensureAudio(); if (!isRunning && !musicTimer) startHomeMusic(); }, { once: true });
-
-    // Ultra-Glossy HD Car SVG Renderer
-    function createCarSVG(car, w = 72, h = 110) {
-      return `<svg width="${w}" height="${h}" viewBox="0 0 80 140" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="bodyGrad_${car.id}" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="${car.bodyColor}"/>
-            <stop offset="100%" stop-color="${car.accentColor}"/>
-          </linearGradient>
-        </defs>
-        <rect x="10" y="10" width="60" height="120" rx="18" fill="url(#bodyGrad_${car.id})" stroke="${car.stripeColor}" stroke-width="2.5"/>
-        <rect x="32" y="10" width="16" height="120" fill="${car.stripeColor}" opacity="0.9"/>
-        <rect x="16" y="44" width="48" height="52" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
-        <rect x="12" y="12" width="12" height="5" rx="2" fill="#fef08a"/>
-        <rect x="56" y="12" width="12" height="5" rx="2" fill="#fef08a"/>
-        <rect x="14" y="123" width="14" height="4" rx="1" fill="#ef4444"/>
-        <rect x="52" y="123" width="14" height="4" rx="1" fill="#ef4444"/>
-      </svg>`;
-    }
-
-    function updateGlobalUI() {
-      document.getElementById('uiCoins').innerText = coins;
-      document.getElementById('garageCoins').innerText = coins;
-      document.getElementById('homeCarPreview').innerHTML = createCarSVG(carsData[activeCarIndex], 90, 130);
-      localStorage.setItem('apex_coins_v4', coins);
-      localStorage.setItem('apex_car_v4', activeCarIndex);
-      localStorage.setItem('apex_unlocked_v4', JSON.stringify(unlockedCars));
-    }
-
-    window.cycleTheme = function() {
-      currentThemeIdx = (currentThemeIdx + 1) % worldThemes.length;
-      document.getElementById('homeThemeLabel').innerText = worldThemes[currentThemeIdx].name;
-    };
-    window.cycleMood = function() {
-      currentMoodIdx = (currentMoodIdx + 1) % weatherMoods.length;
-      document.getElementById('homeMoodLabel').innerText = weatherMoods[currentMoodIdx];
-    };
-
-    window.triggerCarHorn = function(pressed) {
-      if (!pressed) return;
-      hornWaves.push({ x: playerX, y: playerWorldY - 45, radius: 16, alpha: 1.0 });
-      if (audioEnabled) {
-        try {
-          ensureAudio();
-          const now = audioCtx.currentTime;
-          [440, 554].forEach(f => {
-            const o = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            o.type = 'triangle'; o.frequency.setValueAtTime(f, now);
-            g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.005, now + 0.22);
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start(now); o.stop(now + 0.22);
+          </div>
+          </div>
+          </div>
+          </div>
+          <script>
+          const canvas = document.getElementById('gameCanvas');
+          const ctx = canvas.getContext('2d');
+          let coins = parseInt(localStorage.getItem('apex_coins_v4') || '1200');
+          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v4') || '0');
+          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v4') || '[0]');
+          let audioEnabled = true;
+          let controlMode = 'handle';
+          let isRunning = false;
+          let playerX = 565;
+          let playerWorldY = 0;
+          let totalDistanceMeters = 0;
+          let overtakeCount = 0;
+          let cameraWorldY = -560;
+          let speed = 0;
+          let gear = 1;
+          let steerInput = 0;
+          let gasPressed = false;
+          let brakePressed = false;
+          let lanePositions = [420, 565, 715, 860];
+          let trafficCars = [];
+          let hornWaves = [];
+          let weatherParticles = [];
+          let lightningAlpha = 0;
+          const worldThemes = [
+            { id: 'desert', name: 'SAHARA DESERT', ground1: '#d97706', ground2: '#f59e0b', road: '#1e293b', shoulder: '#78350f' },
+            { id: 'jungle', name: 'AMAZON JUNGLE', ground1: '#14532d', ground2: '#166534', road: '#1e293b', shoulder: '#3f6212' },
+            { id: 'city', name: 'CYBER NIGHT CITY', ground1: '#090d16', ground2: '#1e1b4b', road: '#0f172a', shoulder: '#38bdf8' },
+            { id: 'snow', name: 'HIMALAYA SNOW', ground1: '#cbd5e1', ground2: '#f8fafc', road: '#334155', shoulder: '#94a3b8' }
+          ];
+          let currentThemeIdx = 0;
+          const weatherMoods = ['SUNNY DAY', 'MIDNIGHT', 'HEAVY RAIN', 'THUNDER STORM'];
+          let currentMoodIdx = 0;
+          const vehicleCategories = [
+            { typeId: 0, className: 'MINI HATCH', prefix: 'Mini Cooper S', scaleW: 0.85, scaleH: 0.8 },
+            { typeId: 1, className: 'FORD MUSCLE', prefix: 'Mustang GT', scaleW: 1.0, scaleH: 1.0 },
+            { typeId: 2, className: 'F1 HYPERCAR', prefix: 'RedBull RB20', scaleW: 1.02, scaleH: 1.04 },
+            { typeId: 3, className: 'RAPTOR PICKUP', prefix: 'Ford F-150', scaleW: 1.08, scaleH: 1.12 },
+            { typeId: 4, className: 'MONSTER SUV', prefix: 'Defender 4x4', scaleW: 1.1, scaleH: 1.06 },
+            { typeId: 5, className: 'JUMBO TRUCK', prefix: 'Titan Semi', scaleW: 1.24, scaleH: 1.36 }
+          ];
+          const carPalettes = [
+            { body: '#ef4444', stripe: '#fde047', accent: '#991b1b' },
+            { body: '#0284c7', stripe: '#ffffff', accent: '#0c4a6e' },
+            { body: '#10b981', stripe: '#064e3b', accent: '#047857' },
+            { body: '#f59e0b', stripe: '#0f172a', accent: '#b45309' },
+            { body: '#8b5cf6', stripe: '#ddd6fe', accent: '#4c1d95' },
+            { body: '#ec4899', stripe: '#fbcfe8', accent: '#831843' }
+          ];
+          let carsData = [];
+          for (let i = 0; i < 50; i++) {
+            let pal = carPalettes[i % carPalettes.length];
+            let cat = vehicleCategories[i % vehicleCategories.length];
+            carsData.push({ id: i, name: cat.prefix + ' #' + (i + 1), categoryLabel: cat.className, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, topSpeed: 205 + i * 3, accel: 1.25 + i * 0.025, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, price: i === 0 ? 0 : i * 350 });
+          }
+          let audioCtx = null, engineOsc = null, engineGain = null, musicTimer = null, musicStep = 0;
+          function ensureAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+          }
+          function startEngineAudio() {
+            if (!audioEnabled) return;
+            try {
+              ensureAudio();
+              if (engineOsc) return;
+              engineOsc = audioCtx.createOscillator();
+              engineGain = audioCtx.createGain();
+              engineOsc.type = 'sawtooth';
+              engineOsc.frequency.value = 55;
+              engineGain.gain.value = 0.001;
+              engineOsc.connect(engineGain);
+              engineGain.connect(audioCtx.destination);
+              engineOsc.start();
+            } catch (e) {}
+          }
+          function updateEngineAudio() {
+            if (!engineOsc || !engineGain) return;
+            if (!isRunning || !audioEnabled) {
+              engineGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.08);
+              return;
+            }
+            let rpmFreq = 52 + (speed * 0.85) + (gasPressed ? 28 : 0);
+            let vol = gasPressed ? 0.085 : (speed > 5 ? 0.035 : 0.012);
+            engineOsc.frequency.setTargetAtTime(rpmFreq, audioCtx.currentTime, 0.05);
+            engineGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.06);
+          }
+          function playCrashSound() {
+            if (!audioEnabled) return;
+            try {
+              ensureAudio();
+              const now = audioCtx.currentTime;
+              const osc = audioCtx.createOscillator();
+              const g = audioCtx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(140, now);
+              osc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
+              g.gain.setValueAtTime(0.28, now);
+              g.gain.exponentialRampToValueAtTime(0.005, now + 0.45);
+              osc.connect(g); g.connect(audioCtx.destination);
+              osc.start(now); osc.stop(now + 0.45);
+            } catch (e) {}
+          }
+          function startHomeMusic() {
+            stopHomeMusic();
+            if (!audioEnabled || isRunning) return;
+            const notes = [146.83, 174.61, 220.0, 261.63, 293.66, 261.63, 220.0, 174.61];
+            musicTimer = setInterval(() => {
+              if (isRunning || !audioEnabled || !audioCtx || audioCtx.state !== 'running') return;
+              try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(notes[musicStep % notes.length], now);
+                g.gain.setValueAtTime(0.035, now);
+                g.gain.exponentialRampToValueAtTime(0.002, now + 0.16);
+                osc.connect(g); g.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.16);
+                musicStep++;
+              } catch (e) {}
+            }, 180);
+          }
+          function stopHomeMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+          window.addEventListener('pointerdown', () => { ensureAudio(); if (!isRunning && !musicTimer) startHomeMusic(); }, { once: true });
+          function createCarSVG(car, w = 72, h = 110) {
+            return '<svg width=\"' + w + '\" height=\"' + h + '\" viewBox=\"0 0 80 140\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"10\" y=\"10\" width=\"60\" height=\"120\" rx=\"18\" fill=\"' + car.bodyColor + '\" stroke=\"' + car.stripeColor + '\" stroke-width=\"2.5\"/><rect x=\"32\" y=\"10\" width=\"16\" height=\"120\" fill=\"' + car.stripeColor + '\" opacity=\"0.9\"/><rect x=\"16\" y=\"44\" width=\"48\" height=\"52\" rx=\"10\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"1.5\"/><rect x=\"12\" y=\"12\" width=\"12\" height=\"5\" rx=\"2\" fill=\"#fef08a\"/><rect x=\"56\" y=\"12\" width=\"12\" height=\"5\" rx=\"2\" fill=\"#fef08a\"/><rect x=\"14\" y=\"123\" width=\"14\" height=\"4\" rx=\"1\" fill=\"#ef4444\"/><rect x=\"52\" y=\"123\" width=\"14\" height=\"4\" rx=\"1\" fill=\"#ef4444\"/></svg>';
+          }
+          function updateGlobalUI() {
+            document.getElementById('uiCoins').innerText = coins;
+            document.getElementById('garageCoins').innerText = coins;
+            document.getElementById('homeCarPreview').innerHTML = createCarSVG(carsData[activeCarIndex], 90, 130);
+            localStorage.setItem('apex_coins_v4', coins);
+            localStorage.setItem('apex_car_v4', activeCarIndex);
+            localStorage.setItem('apex_unlocked_v4', JSON.stringify(unlockedCars));
+          }
+          window.cycleTheme = function() {
+            currentThemeIdx = (currentThemeIdx + 1) % worldThemes.length;
+            document.getElementById('homeThemeLabel').innerText = worldThemes[currentThemeIdx].name;
+          };
+          window.cycleMood = function() {
+            currentMoodIdx = (currentMoodIdx + 1) % weatherMoods.length;
+            document.getElementById('homeMoodLabel').innerText = weatherMoods[currentMoodIdx];
+          };
+          window.triggerCarHorn = function(pressed) {
+            if (!pressed) return;
+            hornWaves.push({ x: playerX, y: playerWorldY - 45, radius: 16, alpha: 1.0 });
+            if (audioEnabled) {
+              try {
+                ensureAudio();
+                const now = audioCtx.currentTime;
+                [440, 554].forEach(f => {
+                  const o = audioCtx.createOscillator();
+                  const g = audioCtx.createGain();
+                  o.type = 'triangle'; o.frequency.setValueAtTime(f, now);
+                  g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.005, now + 0.22);
+                  o.connect(g); g.connect(audioCtx.destination);
+                  o.start(now); o.stop(now + 0.22);
+                });
+              } catch (e) {}
+            }
+            trafficCars.forEach(t => {
+              let distAhead = playerWorldY - t.worldY;
+              if (distAhead > 60 && distAhead < 520 && Math.abs(t.x - playerX) < 75) {
+                let alt = t.lane === 0 ? 1 : t.lane === 3 ? 2 : (t.lane + 1);
+                t.lane = alt; t.targetX = lanePositions[alt];
+              }
+            });
+          };
+          function getPlayerClosestLane() {
+            let best = 0, minD = 9999;
+            lanePositions.forEach((lx, idx) => { let d = Math.abs(playerX - lx); if (d < minD) { minD = d; best = idx; } });
+            return best;
+          }
+          function isSlotFree(lane, wy, ignoreIdx = -1) {
+            for (let i = 0; i < trafficCars.length; i++) {
+              if (i === ignoreIdx) continue;
+              if (trafficCars[i].lane === lane && Math.abs(trafficCars[i].worldY - wy) < 210) return false;
+            }
+            return true;
+          }
+          function createTrafficVehicle(lane, worldY, forceDirectX = false) {
+            let pal = carPalettes[Math.floor(Math.random() * carPalettes.length)];
+            let cat = vehicleCategories[Math.floor(Math.random() * vehicleCategories.length)];
+            let spd = cat.typeId === 5 ? (32 + Math.random() * 16) : (42 + Math.random() * 28);
+            let startX = forceDirectX ? playerX : lanePositions[lane];
+            return { lane, x: startX, targetX: startX, worldY, speed: spd, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, changeCooldown: 120 + Math.floor(Math.random() * 140) };
+          }
+          function spawnTrafficAhead() {
+            trafficCars = [];
+            let pLane = getPlayerClosestLane();
+            for (let i = 0; i < 6; i++) {
+              let lane = (i === 0 || i === 3) ? pLane : (i % 4);
+              let wy = playerWorldY - 300 - (i * 240);
+              trafficCars.push(createTrafficVehicle(lane, wy, i === 0));
+            }
+          }
+          window.startGameSession = function() {
+            stopHomeMusic();
+            startEngineAudio();
+            document.getElementById('homeScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('hudBar').style.display = 'flex';
+            document.getElementById('gamepad').style.display = 'flex';
+            playerX = lanePositions[1];
+            playerWorldY = 0; totalDistanceMeters = 0; overtakeCount = 0; speed = 0; gear = 1;
+            setGas(false); setBrake(false);
+            spawnTrafficAhead();
+            isRunning = true;
+          };
+          window.backToHome = function() {
+            isRunning = false;
+            updateEngineAudio();
+            startHomeMusic();
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('hudBar').style.display = 'none';
+            document.getElementById('gamepad').style.display = 'none';
+            document.getElementById('homeScreen').style.display = 'flex';
+            updateGlobalUI();
+            if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
+          };
+          window.openGarage = function() {
+            document.getElementById('homeScreen').style.display = 'none';
+            document.getElementById('garageScreen').style.display = 'flex';
+            renderGarageGrid();
+          };
+          window.closeGarage = function() {
+            document.getElementById('garageScreen').style.display = 'none';
+            document.getElementById('homeScreen').style.display = 'flex';
+            updateGlobalUI();
+          };
+          window.openSettings = function() {
+            document.getElementById('homeScreen').style.display = 'none';
+            document.getElementById('settingsScreen').style.display = 'flex';
+          };
+          window.closeSettings = function() {
+            document.getElementById('settingsScreen').style.display = 'none';
+            document.getElementById('homeScreen').style.display = 'flex';
+          };
+          function renderGarageGrid() {
+            const grid = document.getElementById('garageGrid');
+            grid.innerHTML = '';
+            carsData.forEach(car => {
+              let unlocked = unlockedCars.includes(car.id);
+              let selected = activeCarIndex === car.id;
+              let d = document.createElement('div');
+              d.className = 'car-card ' + (selected ? 'selected' : '');
+              d.innerHTML = '<div class=\"text-[9px] text-amber-300 font-bold\">' + car.categoryLabel + '</div>' + createCarSVG(car, 60, 92) + '<div class=\"text-white font-black text-xs mt-1\">' + car.name + '</div><div class=\"text-sky-400 text-[10px] font-bold\">⚡ ' + car.topSpeed + ' KM/H</div><div class=\"mt-2 w-full\">' + (selected ? '<span class=\"text-amber-400 font-black text-xs\">✔ ACTIVE</span>' : unlocked ? '<button class=\"arcade-btn btn-green w-full\" style=\"padding:4px 8px;font-size:10px;\" onclick=\"selectCar(' + car.id + ')\">SELECT</button>' : '<button class=\"arcade-btn btn-blue w-full mb-1\" style=\"padding:4px;font-size:10px;\" onclick=\"unlockWithCoins(' + car.id + ')\">🪙 ' + car.price + '</button><button class=\"arcade-btn btn-purple w-full\" style=\"padding:4px;font-size:10px;\" onclick=\"unlockWithAd(' + car.id + ')\">🎬 WATCH AD</button>') + '</div>';
+              grid.appendChild(d);
+            });
+          }
+          window.selectCar = function(id) { activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); };
+          window.unlockWithCoins = function(id) {
+            if (coins >= carsData[id].price) { coins -= carsData[id].price; unlockedCars.push(id); activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); }
+            else window.unlockWithAd(id);
+          };
+          let adPurpose = null, pendingUnlockCarId = null, adInterval = null;
+          window.unlockWithAd = function(id) { adPurpose = 'unlock'; pendingUnlockCarId = id; startAdModal(5, 'UNLOCK ' + carsData[id].name); };
+          window.watchAdToRevive = function() { adPurpose = 'revive'; startAdModal(5, 'REVIVE & CONTINUE'); };
+          window.onRewardedAdReward = function() { resolveAdReward(); };
+          function startAdModal(sec, title) {
+            document.getElementById('customModal').style.display = 'flex';
+            document.getElementById('modalTitle').innerText = title;
+            const act = document.getElementById('modalActionBtn');
+            const cnt = document.getElementById('adCountdown');
+            act.style.display = 'none';
+            let left = sec; cnt.innerText = left + 's';
+            if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showRewarded'); } catch (e) {} }
+            if (adInterval) clearInterval(adInterval);
+            adInterval = setInterval(() => {
+              left--;
+              if (left > 0) cnt.innerText = left + 's';
+              else { clearInterval(adInterval); cnt.innerText = '✔'; act.style.display = 'inline-flex'; }
+            }, 1000);
+          }
+          window.resolveAdReward = function() {
+            if (adInterval) clearInterval(adInterval);
+            document.getElementById('customModal').style.display = 'none';
+            if (adPurpose === 'unlock' && pendingUnlockCarId !== null) {
+              if (!unlockedCars.includes(pendingUnlockCarId)) unlockedCars.push(pendingUnlockCarId);
+              activeCarIndex = pendingUnlockCarId; updateGlobalUI(); renderGarageGrid();
+            } else if (adPurpose === 'revive') {
+              document.getElementById('gameOverScreen').style.display = 'none';
+              document.getElementById('hudBar').style.display = 'flex';
+              document.getElementById('gamepad').style.display = 'flex';
+              trafficCars.forEach((t, idx) => { t.worldY = playerWorldY - 500 - idx * 230; });
+              speed = 70; isRunning = true;
+            }
+          };
+          window.closeModal = function() { if (adInterval) clearInterval(adInterval); document.getElementById('customModal').style.display = 'none'; };
+          window.toggleAudio = function() {
+            audioEnabled = !audioEnabled;
+            document.getElementById('audioToggleBtn').innerText = audioEnabled ? 'ON' : 'OFF';
+            if (!audioEnabled) stopHomeMusic(); else startHomeMusic();
+          };
+          window.cycleControlMode = function() {
+            controlMode = controlMode === 'handle' ? 'buttons' : 'handle';
+            document.getElementById('controlModeBtn').innerText = controlMode === 'handle' ? 'F1 YOKE HANDLE' : 'BUTTONS (◀ ▶)';
+            document.getElementById('steeringHandleWrap').style.display = controlMode === 'handle' ? 'flex' : 'none';
+            document.getElementById('buttonSteerWrap').style.display = controlMode === 'buttons' ? 'flex' : 'none';
+          };
+          window.setSteer = function(d) { steerInput = d; };
+          window.setGas = function(v) { gasPressed = v; ensureAudio(); startEngineAudio(); document.getElementById('accelPedalEl').classList.toggle('pressed', v); };
+          window.setBrake = function(v) { brakePressed = v; document.getElementById('brakePedalEl').classList.toggle('pressed', v); };
+          const handleWrap = document.getElementById('steeringHandleWrap');
+          const wheelSVG = document.getElementById('steeringWheelSVG');
+          let draggingWheel = false;
+          handleWrap.addEventListener('pointerdown', e => { draggingWheel = true; handleWrap.setPointerCapture(e.pointerId); });
+          handleWrap.addEventListener('pointermove', e => {
+            if (!draggingWheel) return;
+            const r = handleWrap.getBoundingClientRect();
+            let deg = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * (180 / Math.PI);
+            deg = Math.max(-75, Math.min(75, deg));
+            wheelSVG.style.transform = 'rotate(' + deg + 'deg)';
+            steerInput = deg / 55;
           });
-        } catch (e) {}
-      }
-      trafficCars.forEach(t => {
-        let distAhead = playerWorldY - t.worldY;
-        if (distAhead > 60 && distAhead < 520 && Math.abs(t.x - playerX) < 75) {
-          let alt = t.lane === 0 ? 1 : t.lane === 3 ? 2 : (t.lane + 1);
-          t.lane = alt; t.targetX = lanePositions[alt];
-        }
-      });
-    };
+          const relWheel = () => { draggingWheel = false; wheelSVG.style.transform = 'rotate(0deg)'; steerInput = 0; };
+          handleWrap.addEventListener('pointerup', relWheel); handleWrap.addEventListener('pointercancel', relWheel);
+          for (let i = 0; i < 65; i++) weatherParticles.push({ x: Math.random() * 1280, y: Math.random() * 720, len: 18 + Math.random() * 18, vy: 14 + Math.random() * 8 });
+          spawnTrafficAhead();
+          function drawVehicle(sx, sy, v, isPlayer, tilt) {
+            ctx.save(); ctx.translate(sx, sy); ctx.rotate(tilt); ctx.scale(v.scaleW || 1, v.scaleH || 1);
+            if (currentMoodIdx >= 1) {
+              let g = ctx.createLinearGradient(0, -60, 0, -240);
+              g.addColorStop(0, 'rgba(254, 240, 138, 0.45)'); g.addColorStop(1, 'rgba(254, 240, 138, 0)');
+              ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-22, -60); ctx.lineTo(-70, -240); ctx.lineTo(70, -240); ctx.lineTo(22, -60); ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(-32, -64, 64, 128);
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(-36, -46, 9, 24); ctx.fillRect(27, -46, 9, 24);
+            ctx.fillRect(-36, 20, 9, 24); ctx.fillRect(27, 20, 9, 24);
+            ctx.fillStyle = v.bodyColor; ctx.fillRect(-28, -62, 56, 124);
+            ctx.fillStyle = v.stripeColor; ctx.fillRect(-6, -62, 12, 124);
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(-20, -26, 40, 46);
+            ctx.fillStyle = '#fef08a'; ctx.fillRect(-24, -64, 10, 4); ctx.fillRect(14, -64, 10, 4);
+            ctx.fillStyle = (isPlayer && brakePressed) ? '#ff0000' : '#ef4444';
+            ctx.fillRect(-24, 58, 12, 4); ctx.fillRect(12, 58, 12, 4);
+            ctx.restore();
+          }
+          function masterLoop() {
+            const activeCar = carsData[activeCarIndex];
+            const theme = worldThemes[currentThemeIdx];
+            if (isRunning) {
+              if (gasPressed) speed = Math.min(activeCar.topSpeed, speed + activeCar.accel);
+              else speed = Math.max(0, speed - 0.6);
+              if (brakePressed) speed = Math.max(0, speed - 4.2);
+              gear = speed < 2 ? 'N' : Math.min(6, 1 + Math.floor(speed / 42));
+              let step = speed * 0.24;
+              playerWorldY -= step;
+              if (speed > 0.5) totalDistanceMeters += step / 12;
+              if (speed > 1) playerX += steerInput * (6.2 + speed * 0.02);
+              playerX = Math.max(385, Math.min(895, playerX));
+            } else {
+              speed = 75; playerWorldY -= 12;
+            }
+            updateEngineAudio();
+            let playerScreenY = 555 - (gasPressed ? Math.min(80, speed * 0.28) : 20);
+            cameraWorldY = playerWorldY - playerScreenY;
+            ctx.fillStyle = theme.ground1; ctx.fillRect(0, 0, 1280, 720);
+            ctx.fillStyle = theme.shoulder; ctx.fillRect(325, 0, 630, 720);
+            ctx.fillStyle = theme.road; ctx.fillRect(350, 0, 580, 720);
+            ctx.fillStyle = '#fde047';
+            let dashStart = Math.floor(cameraWorldY / 90) * 90;
+            for (let wy = dashStart; wy < cameraWorldY + 810; wy += 90) {
+              let sy = wy - cameraWorldY;
+              ctx.fillRect(492, sy, 6, 48); ctx.fillRect(637, sy, 6, 48); ctx.fillRect(782, sy, 6, 48);
+            }
+            for (let i = 0; i < trafficCars.length; i++) {
+              let t = trafficCars[i];
+              t.worldY -= t.speed * 0.14;
+              let sy = t.worldY - cameraWorldY;
+              if (sy > 860) {
+                if (isRunning) { coins += 25; overtakeCount++; }
+                let nl = Math.floor(Math.random() * 4);
+                let nwy = playerWorldY - 760 - Math.random() * 360;
+                trafficCars[i] = createTrafficVehicle(nl, nwy, true);
+                continue;
+              }
+              drawVehicle(t.x, t.worldY - cameraWorldY, t, false, 0);
+              if (isRunning && Math.abs(playerX - t.x) < 46 && Math.abs(playerScreenY - (t.worldY - cameraWorldY)) < 96) {
+                isRunning = false; setGas(false); setBrake(false); playCrashSound(); updateGlobalUI();
+                document.getElementById('crashDistText').innerText = Math.floor(totalDistanceMeters) + 'm';
+                document.getElementById('crashOvertakeText').innerText = overtakeCount;
+                document.getElementById('hudBar').style.display = 'none';
+                document.getElementById('gamepad').style.display = 'none';
+                document.getElementById('gameOverScreen').style.display = 'flex';
+                if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
+              }
+            }
+            for (let h = hornWaves.length - 1; h >= 0; h--) {
+              let hw = hornWaves[h]; hw.radius += 7; hw.alpha -= 0.04;
+              ctx.strokeStyle = 'rgba(253, 224, 71, ' + hw.alpha + ')'; ctx.lineWidth = 4;
+              ctx.beginPath(); ctx.arc(hw.x, hw.y - cameraWorldY, hw.radius, -Math.PI * 0.85, -Math.PI * 0.15); ctx.stroke();
+              if (hw.alpha <= 0) hornWaves.splice(h, 1);
+            }
+            drawVehicle(playerX, playerScreenY, activeCar, true, steerInput * 0.12);
+            if (currentMoodIdx >= 1) { ctx.fillStyle = 'rgba(2, 6, 23, 0.45)'; ctx.fillRect(0, 0, 1280, 720); }
+            if (currentMoodIdx >= 2) {
+              ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)'; ctx.lineWidth = 2;
+              weatherParticles.forEach(p => {
+                p.y += p.vy; p.x -= 3; if (p.y > 720) { p.y = -20; p.x = Math.random() * 1280; }
+                ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 4, p.y + p.len); ctx.stroke();
+              });
+              if (currentMoodIdx === 3 && Math.random() < 0.012) lightningAlpha = 0.8;
+              if (lightningAlpha > 0) { ctx.fillStyle = 'rgba(255,255,255,' + lightningAlpha + ')'; ctx.fillRect(0, 0, 1280, 720); lightningAlpha -= 0.08; }
+            }
+            if (isRunning) {
+              document.getElementById('uiSpeed').innerText = Math.floor(speed);
+              let speedBar = document.getElementById('uiSpeedBar');
+              if (speedBar) speedBar.style.width = Math.min(100, (speed / activeCar.topSpeed) * 100) + '%';
+              document.getElementById('uiGear').innerText = gear;
+              document.getElementById('uiCoins').innerText = coins;
+              document.getElementById('uiDist').innerText = Math.floor(totalDistanceMeters);
+              document.getElementById('uiOvertakes').innerText = overtakeCount;
+            }
+            requestAnimationFrame(masterLoop);
+          }
+          updateGlobalUI();
+          requestAnimationFrame(masterLoop);
+          </script>
+          </body>
+          </html>
+          EOF
 
-    function getPlayerClosestLane() {
-      let best = 0, minD = 9999;
-      lanePositions.forEach((lx, idx) => { let d = Math.abs(playerX - lx); if (d < minD) { minD = d; best = idx; } });
-      return best;
-    }
+      - name: Configure Gradle & SDK 34
+        run: |
+          cat << 'EOF' > android/app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'kotlin-android'
+              id 'dev.flutter.flutter-gradle-plugin'
+          }
 
-    function isSlotFree(lane, wy, ignoreIdx = -1) {
-      for (let i = 0; i < trafficCars.length; i++) {
-        if (i === ignoreIdx) continue;
-        if (trafficCars[i].lane === lane && Math.abs(trafficCars[i].worldY - wy) < 210) return false;
-      }
-      return true;
-    }
+          android {
+              namespace = 'com.rahulgupta.speedracer'
+              compileSdk = 34
+              ndkVersion = flutter.ndkVersion
 
-    function createTrafficVehicle(lane, worldY, forceDirectX = false) {
-      let pal = carPalettes[Math.floor(Math.random() * carPalettes.length)];
-      let cat = vehicleCategories[Math.floor(Math.random() * vehicleCategories.length)];
-      let spd = cat.typeId === 5 ? (32 + Math.random() * 16) : (42 + Math.random() * 28);
-      let startX = forceDirectX ? playerX : lanePositions[lane];
-      return { lane, x: startX, targetX: startX, worldY, speed: spd, bodyColor: pal.body, stripeColor: pal.stripe, accentColor: pal.accent, bodyStyle: cat.typeId, scaleW: cat.scaleW, scaleH: cat.scaleH, changeCooldown: 120 + Math.floor(Math.random() * 140) };
-    }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_1_8
+                  targetCompatibility = JavaVersion.VERSION_1_8
+              }
 
-    function spawnTrafficAhead() {
-      trafficCars = [];
-      let pLane = getPlayerClosestLane();
-      for (let i = 0; i < 6; i++) {
-        let lane = (i === 0 || i === 3) ? pLane : (i % 4);
-        let wy = playerWorldY - 300 - (i * 240);
-        trafficCars.push(createTrafficVehicle(lane, wy, i === 0));
-      }
-    }
+              kotlinOptions {
+                  jvmTarget = '1.8'
+              }
 
-    window.startGameSession = function() {
-      stopHomeMusic();
-      startEngineAudio();
-      document.getElementById('homeScreen').style.display = 'none';
-      document.getElementById('gameOverScreen').style.display = 'none';
-      document.getElementById('hudBar').style.display = 'flex';
-      document.getElementById('gamepad').style.display = 'flex';
-      playerX = lanePositions[1];
-      playerWorldY = 0; totalDistanceMeters = 0; overtakeCount = 0; speed = 0; gear = 1;
-      setGas(false); setBrake(false);
-      spawnTrafficAhead();
-      isRunning = true;
-    };
+              defaultConfig {
+                  applicationId = 'com.rahulgupta.speedracer'
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = '1.0.0'
+                  multiDexEnabled = true
+              }
 
-    window.backToHome = function() {
-      isRunning = false;
-      updateEngineAudio();
-      startHomeMusic();
-      document.getElementById('gameOverScreen').style.display = 'none';
-      document.getElementById('hudBar').style.display = 'none';
-      document.getElementById('gamepad').style.display = 'none';
-      document.getElementById('homeScreen').style.display = 'flex';
-      updateGlobalUI();
-      if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
-    };
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.debug
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
 
-    window.openGarage = function() {
-      document.getElementById('homeScreen').style.display = 'none';
-      document.getElementById('garageScreen').style.display = 'flex';
-      renderGarageGrid();
-    };
-    window.closeGarage = function() {
-      document.getElementById('garageScreen').style.display = 'none';
-      document.getElementById('homeScreen').style.display = 'flex';
-      updateGlobalUI();
-    };
-    window.openSettings = function() {
-      document.getElementById('homeScreen').style.display = 'none';
-      document.getElementById('settingsScreen').style.display = 'flex';
-    };
-    window.closeSettings = function() {
-      document.getElementById('settingsScreen').style.display = 'none';
-      document.getElementById('homeScreen').style.display = 'flex';
-    };
+          flutter {
+              source = '../..'
+          }
+          EOF
 
-    function renderGarageGrid() {
-      const grid = document.getElementById('garageGrid');
-      grid.innerHTML = '';
-      carsData.forEach(car => {
-        let unlocked = unlockedCars.includes(car.id);
-        let selected = activeCarIndex === car.id;
-        let d = document.createElement('div');
-        d.className = 'car-card ' + (selected ? 'selected' : '');
-        d.innerHTML = `<div class='text-[9px] text-amber-300 font-bold'>${car.categoryLabel}</div>${createCarSVG(car, 60, 92)}<div class='text-white font-black text-xs mt-1'>${car.name}</div><div class='text-sky-400 text-[10px] font-bold'>⚡ ${car.topSpeed} KM/H</div><div class='mt-2 w-full'>${selected ? '<span class="text-amber-400 font-black text-xs">✔ ACTIVE</span>' : unlocked ? `<button class="arcade-btn btn-green w-full" style="padding:4px 8px;font-size:10px;" onclick="selectCar(${car.id})">SELECT</button>` : `<button class="arcade-btn btn-blue w-full mb-1" style="padding:4px;font-size:10px;" onclick="unlockWithCoins(${car.id})">🪙 ${car.price}</button><button class="arcade-btn btn-purple w-full" style="padding:4px;font-size:10px;" onclick="unlockWithAd(${car.id})">🎬 WATCH AD</button>`}</div>`;
-        grid.appendChild(d);
-      });
-    }
+      - name: Configure AdMob & Permissions in AndroidManifest
+        run: |
+          python3 -c "
+          p = 'android/app/src/main/AndroidManifest.xml'
+          s = open(p).read()
+          perms = '<uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\"/>'
+          if 'android.permission.INTERNET' not in s:
+              s = s.replace('<application', perms + '\n    <application', 1)
+          meta = '<meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"ca-app-pub-1590363558146928~3904943143\"/>'
+          if 'com.google.android.gms.ads.APPLICATION_ID' not in s:
+              s = s.replace('</application>', '    ' + meta + '\n    </application>', 1)
+          open(p, 'w').write(s)
+          "
 
-    window.selectCar = function(id) { activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); };
-    window.unlockWithCoins = function(id) {
-      if (coins >= carsData[id].price) { coins -= carsData[id].price; unlockedCars.push(id); activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); }
-      else window.unlockWithAd(id);
-    };
+      - name: Fix Kotlin & Gradle Versions
+        run: |
+          find android -name 'settings.gradle' -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' {} +
+          find android -name 'build.gradle' -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
 
-    let adPurpose = null, pendingUnlockCarId = null, adInterval = null;
-    window.unlockWithAd = function(id) { adPurpose = 'unlock'; pendingUnlockCarId = id; startAdModal(5, 'UNLOCK ' + carsData[id].name); };
-    window.watchAdToRevive = function() { adPurpose = 'revive'; startAdModal(5, 'REVIVE & CONTINUE'); };
-    window.onRewardedAdReward = function() { resolveAdReward(); };
+      - name: Get Dependencies
+        run: flutter pub get
 
-    function startAdModal(sec, title) {
-      document.getElementById('customModal').style.display = 'flex';
-      document.getElementById('modalTitle').innerText = title;
-      const act = document.getElementById('modalActionBtn');
-      const cnt = document.getElementById('adCountdown');
-      act.style.display = 'none';
-      let left = sec; cnt.innerText = left + 's';
-      if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showRewarded'); } catch (e) {} }
-      if (adInterval) clearInterval(adInterval);
-      adInterval = setInterval(() => {
-        left--;
-        if (left > 0) cnt.innerText = left + 's';
-        else { clearInterval(adInterval); cnt.innerText = '✔'; act.style.display = 'inline-flex'; }
-      }, 1000);
-    }
+      - name: Build Release APK
+        run: flutter build apk --release --no-tree-shake-icons
 
-    window.resolveAdReward = function() {
-      if (adInterval) clearInterval(adInterval);
-      document.getElementById('customModal').style.display = 'none';
-      if (adPurpose === 'unlock' && pendingUnlockCarId !== null) {
-        if (!unlockedCars.includes(pendingUnlockCarId)) unlockedCars.push(pendingUnlockCarId);
-        activeCarIndex = pendingUnlockCarId; updateGlobalUI(); renderGarageGrid();
-      } else if (adPurpose === 'revive') {
-        document.getElementById('gameOverScreen').style.display = 'none';
-        document.getElementById('hudBar').style.display = 'flex';
-        document.getElementById('gamepad').style.display = 'flex';
-        trafficCars.forEach((t, idx) => { t.worldY = playerWorldY - 500 - idx * 230; });
-        speed = 70; isRunning = true;
-      }
-    };
-    window.closeModal = function() { if (adInterval) clearInterval(adInterval); document.getElementById('customModal').style.display = 'none'; };
-
-    window.toggleAudio = function() {
-      audioEnabled = !audioEnabled;
-      document.getElementById('audioToggleBtn').innerText = audioEnabled ? 'ON' : 'OFF';
-      if (!audioEnabled) stopHomeMusic(); else startHomeMusic();
-    };
-
-    window.cycleControlMode = function() {
-      controlMode = controlMode === 'handle' ? 'buttons' : 'handle';
-      document.getElementById('controlModeBtn').innerText = controlMode === 'handle' ? 'F1 YOKE HANDLE' : 'BUTTONS (◀ ▶)';
-      document.getElementById('steeringHandleWrap').style.display = controlMode === 'handle' ? 'flex' : 'none';
-      document.getElementById('buttonSteerWrap').style.display = controlMode === 'buttons' ? 'flex' : 'none';
-    };
-
-    window.setSteer = function(d) { steerInput = d; };
-    window.setGas = function(v) { gasPressed = v; ensureAudio(); startEngineAudio(); document.getElementById('accelPedalEl').classList.toggle('pressed', v); };
-    window.setBrake = function(v) { brakePressed = v; document.getElementById('brakePedalEl').classList.toggle('pressed', v); };
-
-    const handleWrap = document.getElementById('steeringHandleWrap');
-    const wheelSVG = document.getElementById('steeringWheelSVG');
-    let draggingWheel = false;
-    handleWrap.addEventListener('pointerdown', e => { draggingWheel = true; handleWrap.setPointerCapture(e.pointerId); });
-    handleWrap.addEventListener('pointermove', e => {
-      if (!draggingWheel) return;
-      const r = handleWrap.getBoundingClientRect();
-      let deg = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * (180 / Math.PI);
-      deg = Math.max(-75, Math.min(75, deg));
-      wheelSVG.style.transform = `rotate(${deg}deg)`;
-      steerInput = deg / 55;
-    });
-    const relWheel = () => { draggingWheel = false; wheelSVG.style.transform = 'rotate(0deg)'; steerInput = 0; };
-    handleWrap.addEventListener('pointerup', relWheel); handleWrap.addEventListener('pointercancel', relWheel);
-
-    for (let i = 0; i < 65; i++) weatherParticles.push({ x: Math.random() * 1280, y: Math.random() * 720, len: 18 + Math.random() * 18, vy: 14 + Math.random() * 8 });
-    spawnTrafficAhead();
-
-    function drawVehicle(sx, sy, v, isPlayer, tilt) {
-      ctx.save(); ctx.translate(sx, sy); ctx.rotate(tilt); ctx.scale(v.scaleW || 1, v.scaleH || 1);
-      if (currentMoodIdx >= 1) {
-        let g = ctx.createLinearGradient(0, -60, 0, -240);
-        g.addColorStop(0, 'rgba(254, 240, 138, 0.45)'); g.addColorStop(1, 'rgba(254, 240, 138, 0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-22, -60); ctx.lineTo(-70, -240); ctx.lineTo(70, -240); ctx.lineTo(22, -60); ctx.fill();
-      }
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(-32, -64, 64, 128);
-      ctx.fillStyle = '#090d16';
-      ctx.fillRect(-36, -46, 9, 24); ctx.fillRect(27, -46, 9, 24);
-      ctx.fillRect(-36, 20, 9, 24); ctx.fillRect(27, 20, 9, 24);
-      ctx.fillStyle = v.bodyColor; ctx.fillRect(-28, -62, 56, 124);
-      ctx.fillStyle = v.stripeColor; ctx.fillRect(-6, -62, 12, 124);
-      ctx.fillStyle = '#0f172a'; ctx.fillRect(-20, -26, 40, 46);
-      ctx.fillStyle = '#fef08a'; ctx.fillRect(-24, -64, 10, 4); ctx.fillRect(14, -64, 10, 4);
-      ctx.fillStyle = (isPlayer && brakePressed) ? '#ff0000' : '#ef4444';
-      ctx.fillRect(-24, 58, 12, 4); ctx.fillRect(12, 58, 12, 4);
-      ctx.restore();
-    }
-
-    function masterLoop() {
-      const activeCar = carsData[activeCarIndex];
-      const theme = worldThemes[currentThemeIdx];
-      if (isRunning) {
-        if (gasPressed) speed = Math.min(activeCar.topSpeed, speed + activeCar.accel);
-        else speed = Math.max(0, speed - 0.6);
-        if (brakePressed) speed = Math.max(0, speed - 4.2);
-        gear = speed < 2 ? 'N' : Math.min(6, 1 + Math.floor(speed / 42));
-        let step = speed * 0.24;
-        playerWorldY -= step;
-        if (speed > 0.5) totalDistanceMeters += step / 12;
-        if (speed > 1) playerX += steerInput * (6.2 + speed * 0.02);
-        playerX = Math.max(385, Math.min(895, playerX));
-      } else {
-        speed = 75; playerWorldY -= 12;
-      }
-      updateEngineAudio();
-      let playerScreenY = 555 - (gasPressed ? Math.min(80, speed * 0.28) : 20);
-      cameraWorldY = playerWorldY - playerScreenY;
-
-      ctx.fillStyle = theme.ground1; ctx.fillRect(0, 0, 1280, 720);
-      ctx.fillStyle = theme.shoulder; ctx.fillRect(325, 0, 630, 720);
-      ctx.fillStyle = theme.road; ctx.fillRect(350, 0, 580, 720);
-      ctx.fillStyle = '#fde047';
-      let dashStart = Math.floor(cameraWorldY / 90) * 90;
-      for (let wy = dashStart; wy < cameraWorldY + 810; wy += 90) {
-        let sy = wy - cameraWorldY;
-        ctx.fillRect(492, sy, 6, 48); ctx.fillRect(637, sy, 6, 48); ctx.fillRect(782, sy, 6, 48);
-      }
-
-      for (let i = 0; i < trafficCars.length; i++) {
-        let t = trafficCars[i];
-        t.worldY -= t.speed * 0.14;
-        let sy = t.worldY - cameraWorldY;
-        if (sy > 860) {
-          if (isRunning) { coins += 25; overtakeCount++; }
-          let nl = Math.floor(Math.random() * 4);
-          let nwy = playerWorldY - 760 - Math.random() * 360;
-          trafficCars[i] = createTrafficVehicle(nl, nwy, true);
-          continue;
-        }
-        drawVehicle(t.x, t.worldY - cameraWorldY, t, false, 0);
-        if (isRunning && Math.abs(playerX - t.x) < 46 && Math.abs(playerScreenY - (t.worldY - cameraWorldY)) < 96) {
-          isRunning = false; setGas(false); setBrake(false); playCrashSound(); updateGlobalUI();
-          document.getElementById('crashDistText').innerText = Math.floor(totalDistanceMeters) + 'm';
-          document.getElementById('crashOvertakeText').innerText = overtakeCount;
-          document.getElementById('hudBar').style.display = 'none';
-          document.getElementById('gamepad').style.display = 'none';
-          document.getElementById('gameOverScreen').style.display = 'flex';
-          if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showInterstitial'); } catch (e) {} }
-        }
-      }
-
-      for (let h = hornWaves.length - 1; h >= 0; h--) {
-        let hw = hornWaves[h]; hw.radius += 7; hw.alpha -= 0.04;
-        ctx.strokeStyle = `rgba(253, 224, 71, ${hw.alpha})`; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.arc(hw.x, hw.y - cameraWorldY, hw.radius, -Math.PI * 0.85, -Math.PI * 0.15); ctx.stroke();
-        if (hw.alpha <= 0) hornWaves.splice(h, 1);
-      }
-
-      drawVehicle(playerX, playerScreenY, activeCar, true, steerInput * 0.12);
-
-      if (currentMoodIdx >= 1) { ctx.fillStyle = 'rgba(2, 6, 23, 0.45)'; ctx.fillRect(0, 0, 1280, 720); }
-      if (currentMoodIdx >= 2) {
-        ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)'; ctx.lineWidth = 2;
-        weatherParticles.forEach(p => {
-          p.y += p.vy; p.x -= 3; if (p.y > 720) { p.y = -20; p.x = Math.random() * 1280; }
-          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 4, p.y + p.len); ctx.stroke();
-        });
-        if (currentMoodIdx === 3 && Math.random() < 0.012) lightningAlpha = 0.8;
-        if (lightningAlpha > 0) { ctx.fillStyle = `rgba(255,255,255,${lightningAlpha})`; ctx.fillRect(0, 0, 1280, 720); lightningAlpha -= 0.08; }
-      }
-
-      if (isRunning) {
-        document.getElementById('uiSpeed').innerText = Math.floor(speed);
-        document.getElementById('uiSpeedBar').style.width = Math.min(100, (speed / activeCar.topSpeed) * 100) + '%';
-        document.getElementById('uiGear').innerText = gear;
-        document.getElementById('uiCoins').innerText = coins;
-        document.getElementById('uiDist').innerText = Math.floor(totalDistanceMeters);
-        document.getElementById('uiOvertakes').innerText = overtakeCount;
-      }
-      requestAnimationFrame(masterLoop);
-    }
-
-    updateGlobalUI();
-    requestAnimationFrame(masterLoop);
-  </script>
-</body>
-</html>
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: car-racing-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
