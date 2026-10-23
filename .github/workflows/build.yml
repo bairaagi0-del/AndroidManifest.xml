@@ -51,46 +51,35 @@ jobs:
       - name: Recreate Android Project Structure
         run: flutter create . --org com.rahulgupta --project-name speedracer
 
-      - name: Generate Red Bull F1 App Launcher Icon
+      - name: Process Custom Logo & Generate Android Launcher Icons
         run: |
           pip install Pillow
           python3 -c "
-          import os
-          from PIL import Image, ImageDraw
+          import os, glob
+          from PIL import Image
+
+          # Find uploaded logo image in repo
+          search_files = glob.glob('*.png') + glob.glob('*.jpg') + glob.glob('assets/*.png')
+          source_img = None
+          for f in search_files:
+              if any(k in f.lower() for k in ['red', 'bull', 'racing', 'logo', 'emblem', 'icon']):
+                  source_img = f
+                  break
+          if not source_img and search_files:
+              source_img = search_files[0]
 
           sizes = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
           for folder, size in sizes.items():
               d_path = f'android/app/src/main/res/{folder}'
               os.makedirs(d_path, exist_ok=True)
-              
-              img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-              draw = ImageDraw.Draw(img)
-              
-              margin = int(size * 0.04)
-              draw.ellipse([margin, margin, size - margin, size - margin], fill=(10, 14, 26, 255), outline=(239, 68, 68, 255), width=max(2, int(size * 0.04)))
-              
-              sun_r = int(size * 0.22)
-              cx, cy = size // 2, int(size * 0.4)
-              draw.ellipse([cx - sun_r, cy - sun_r, cx + sun_r, cy + sun_r], fill=(250, 204, 21, 255))
-              
-              draw.polygon([(cx - sun_r, cy), (cx - int(sun_r*0.4), cy - int(sun_r*0.6)), (cx, cy)], fill=(239, 68, 68, 255))
-              draw.polygon([(cx + sun_r, cy), (cx + int(sun_r*0.4), cy - int(sun_r*0.6)), (cx, cy)], fill=(239, 68, 68, 255))
-              
-              banner_w = int(size * 0.76)
-              banner_h = int(size * 0.28)
-              bx = (size - banner_w) // 2
-              by = int(size * 0.52)
-              draw.rectangle([bx, by, bx + banner_w, by + banner_h], fill=(220, 38, 38, 255))
-              
-              car_w = int(size * 0.6)
-              car_h = int(size * 0.18)
-              cx_car = (size - car_w) // 2
-              cy_car = int(size * 0.78)
-              draw.rounded_rectangle([cx_car, cy_car, cx_car + car_w, cy_car + car_h], radius=int(size*0.04), fill=(245, 158, 11, 255))
-              
+              if source_img:
+                  img = Image.open(source_img).convert('RGBA')
+                  img = img.resize((size, size), Image.Resampling.LANCZOS)
+              else:
+                  img = Image.new('RGBA', (size, size), (10, 14, 26, 255))
               img.save(f'{d_path}/ic_launcher.png')
               img.save(f'{d_path}/ic_launcher_round.png')
-          print('Red Bull F1 App Icon generated successfully!')
+          print('Custom Red Bull F1 Logo applied successfully to all launcher icons!')
           "
 
       - name: Fix Android Gradle Properties & Wrapper
@@ -145,6 +134,7 @@ jobs:
             bool _isBannerReady = false;
             RewardedAd? _rewardedAd;
             InterstitialAd? _interstitialAd;
+            bool _isRewardedReady = false;
 
             final String _realBannerId = 'ca-app-pub-1590363558146928/9630631281';
             final String _realInterstitialId = 'ca-app-pub-1590363558146928/7196039630';
@@ -223,8 +213,15 @@ jobs:
                 adUnitId: _realRewardedId,
                 request: const AdRequest(),
                 rewardedAdLoadCallback: RewardedAdLoadCallback(
-                  onAdLoaded: (ad) { _rewardedAd = ad; },
-                  onAdFailedToLoad: (error) { _rewardedAd = null; Future.delayed(const Duration(seconds: 5), _loadRewardedAd); },
+                  onAdLoaded: (ad) {
+                    _rewardedAd = ad;
+                    setState(() { _isRewardedReady = true; });
+                  },
+                  onAdFailedToLoad: (error) {
+                    _rewardedAd = null;
+                    setState(() { _isRewardedReady = false; });
+                    Future.delayed(const Duration(seconds: 5), _loadRewardedAd);
+                  },
                 ),
               );
             }
@@ -232,8 +229,18 @@ jobs:
             void _showRewardedAd() {
               if (_rewardedAd != null) {
                 _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-                  onAdDismissedFullScreenContent: (ad) { ad.dispose(); _rewardedAd = null; _loadRewardedAd(); },
-                  onAdFailedToShowFullScreenContent: (ad, error) { ad.dispose(); _rewardedAd = null; _loadRewardedAd(); },
+                  onAdDismissedFullScreenContent: (ad) {
+                    ad.dispose();
+                    _rewardedAd = null;
+                    setState(() { _isRewardedReady = false; });
+                    _loadRewardedAd();
+                  },
+                  onAdFailedToShowFullScreenContent: (ad, error) {
+                    ad.dispose();
+                    _rewardedAd = null;
+                    setState(() { _isRewardedReady = false; });
+                    _loadRewardedAd();
+                  },
                 );
                 _rewardedAd!.show(
                   onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
@@ -242,6 +249,7 @@ jobs:
                 );
                 _rewardedAd = null;
               } else {
+                _controller.runJavaScript("if(window.onAdNotLoaded) window.onAdNotLoaded();");
                 _loadRewardedAd();
               }
             }
@@ -409,11 +417,9 @@ jobs:
           <div id="customModal">
           <div class="bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl text-center max-w-sm w-full shadow-2xl">
           <div id="modalTitle" class="text-amber-400 font-black text-lg mb-2">SPONSORED REWARD AD</div>
-          <div class="text-slate-300 text-xs mb-3">Watch ad counting to claim your reward!</div>
-          <div id="adCountdown" class="text-4xl font-black text-white my-3">5s</div>
-          <div class="flex gap-3 justify-center">
-          <button id="modalActionBtn" class="arcade-btn btn-green" style="display:none;" onclick="resolveAdReward()">🎁 CLAIM REWARD</button>
-          <button id="modalCloseBtn" class="arcade-btn btn-red" onclick="closeModal()">✖ CANCEL</button>
+          <div id="modalMsg" class="text-slate-300 text-xs mb-3">Loading AdMob Rewarded Ad... Please wait.</div>
+          <div class="flex gap-3 justify-center mt-3">
+          <button id="modalCloseBtn" class="arcade-btn btn-red" onclick="closeModal()">✖ CLOSE</button>
           </div>
           </div>
           </div>
@@ -421,9 +427,9 @@ jobs:
           <script>
           const canvas = document.getElementById('gameCanvas');
           const ctx = canvas.getContext('2d');
-          let coins = parseInt(localStorage.getItem('apex_coins_v4') || '1200');
-          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v4') || '0');
-          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v4') || '[0]');
+          let coins = parseInt(localStorage.getItem('apex_coins_v5') || '1200');
+          let activeCarIndex = parseInt(localStorage.getItem('apex_car_v5') || '0');
+          let unlockedCars = JSON.parse(localStorage.getItem('apex_unlocked_v5') || '[0]');
           let audioEnabled = true;
           let controlMode = 'handle';
           let isRunning = false;
@@ -549,9 +555,9 @@ jobs:
             document.getElementById('uiCoins').innerText = coins;
             document.getElementById('garageCoins').innerText = coins;
             document.getElementById('homeCarPreview').innerHTML = createCarSVG(carsData[activeCarIndex], 90, 130);
-            localStorage.setItem('apex_coins_v4', coins);
-            localStorage.setItem('apex_car_v4', activeCarIndex);
-            localStorage.setItem('apex_unlocked_v4', JSON.stringify(unlockedCars));
+            localStorage.setItem('apex_coins_v5', coins);
+            localStorage.setItem('apex_car_v5', activeCarIndex);
+            localStorage.setItem('apex_unlocked_v5', JSON.stringify(unlockedCars));
           }
           window.cycleTheme = function() {
             currentThemeIdx = (currentThemeIdx + 1) % worldThemes.length;
@@ -673,27 +679,22 @@ jobs:
             if (coins >= carsData[id].price) { coins -= carsData[id].price; unlockedCars.push(id); activeCarIndex = id; updateGlobalUI(); renderGarageGrid(); }
             else window.unlockWithAd(id);
           };
-          let adPurpose = null, pendingUnlockCarId = null, adInterval = null;
-          window.unlockWithAd = function(id) { adPurpose = 'unlock'; pendingUnlockCarId = id; startAdModal(5, 'UNLOCK ' + carsData[id].name); };
-          window.watchAdToRevive = function() { adPurpose = 'revive'; startAdModal(5, 'REVIVE & CONTINUE'); };
-          window.onRewardedAdReward = function() { resolveAdReward(); };
-          function startAdModal(sec, title) {
+          let adPurpose = null, pendingUnlockCarId = null;
+          window.unlockWithAd = function(id) { adPurpose = 'unlock'; pendingUnlockCarId = id; showRealAdModal('UNLOCK ' + carsData[id].name); };
+          window.watchAdToRevive = function() { adPurpose = 'revive'; showRealAdModal('REVIVE & CONTINUE'); };
+          
+          function showRealAdModal(title) {
             document.getElementById('customModal').style.display = 'flex';
             document.getElementById('modalTitle').innerText = title;
-            const act = document.getElementById('modalActionBtn');
-            const cnt = document.getElementById('adCountdown');
-            act.style.display = 'none';
-            let left = sec; cnt.innerText = left + 's';
+            document.getElementById('modalMsg').innerText = 'Requesting AdMob Rewarded Ad from Google SDK...';
             if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showRewarded'); } catch (e) {} }
-            if (adInterval) clearInterval(adInterval);
-            adInterval = setInterval(() => {
-              left--;
-              if (left > 0) cnt.innerText = left + 's';
-              else { clearInterval(adInterval); cnt.innerText = '✔'; act.style.display = 'inline-flex'; }
-            }, 1000);
           }
-          window.resolveAdReward = function() {
-            if (adInterval) clearInterval(adInterval);
+          
+          window.onAdNotLoaded = function() {
+            document.getElementById('modalMsg').innerText = 'Ad not loaded yet! Please try again in a moment when ad is ready.';
+          };
+
+          window.onRewardedAdReward = function() {
             document.getElementById('customModal').style.display = 'none';
             if (adPurpose === 'unlock' && pendingUnlockCarId !== null) {
               if (!unlockedCars.includes(pendingUnlockCarId)) unlockedCars.push(pendingUnlockCarId);
@@ -706,7 +707,7 @@ jobs:
               speed = 70; isRunning = true;
             }
           };
-          window.closeModal = function() { if (adInterval) clearInterval(adInterval); document.getElementById('customModal').style.display = 'none'; };
+          window.closeModal = function() { document.getElementById('customModal').style.display = 'none'; };
           window.toggleAudio = function() {
             audioEnabled = !audioEnabled;
             document.getElementById('audioToggleBtn').innerText = audioEnabled ? 'ON' : 'OFF';
