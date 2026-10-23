@@ -51,6 +51,52 @@ jobs:
       - name: Recreate Android Project Structure
         run: flutter create . --org com.rahulgupta --project-name speedracer
 
+      - name: Generate Red Bull F1 App Launcher Icon
+        run: |
+          python3 -c "
+          import os
+          from PIL import Image, ImageDraw, ImageFont
+
+          sizes = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
+          for folder, size in sizes.items():
+              d_path = f'android/app/src/main/res/{folder}'
+              os.makedirs(d_path, exist_ok=True)
+              
+              img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              
+              # Circular Red Bull Racing Emblem Background & Border
+              margin = int(size * 0.04)
+              draw.ellipse([margin, margin, size - margin, size - margin], fill=(10, 14, 26, 255), outline=(239, 68, 68, 255), width=max(2, int(size * 0.04)))
+              
+              # Yellow Sun Center
+              sun_r = int(size * 0.22)
+              cx, cy = size // 2, int(size * 0.4)
+              draw.ellipse([cx - sun_r, cy - sun_r, cx + sun_r, cy + sun_r], fill=(250, 204, 21, 255))
+              
+              # Red Bulls silhouettes representation
+              draw.polygon([(cx - sun_r, cy), (cx - int(sun_r*0.4), cy - int(sun_r*0.6), (cx, cy))], fill=(239, 68, 68, 255))
+              draw.polygon([(cx + sun_r, cy), (cx + int(sun_r*0.4), cy - int(sun_r*0.6), (cx, cy))], fill=(239, 68, 68, 255))
+              
+              # Racing Text Banner Box
+              banner_w = int(size * 0.76)
+              banner_h = int(size * 0.28)
+              bx = (size - banner_w) // 2
+              by = int(size * 0.52)
+              draw.rectangle([bx, by, bx + banner_w, by + banner_h], fill=(220, 38, 38, 255))
+              
+              # F1 Car Front Nose at bottom
+              car_w = int(size * 0.6)
+              car_h = int(size * 0.18)
+              cx_car = (size - car_w) // 2
+              cy_car = int(size * 0.78)
+              draw.rounded_rectangle([cx_car, cy_car, cx_car + car_w, cy_car + car_h], radius=int(size*0.04), fill=(245, 158, 11, 255))
+              
+              img.save(f'{d_path}/ic_launcher.png')
+              img.save(f'{d_path}/ic_launcher_round.png')
+          print('Red Bull F1 App Icon generated successfully in all mipmap directories!')
+          "
+
       - name: Fix Android Gradle Properties & Wrapper
         run: |
           echo "android.useAndroidX=true" > android/gradle.properties
@@ -861,7 +907,7 @@ jobs:
 
       - name: Fix Kotlin & Gradle Versions
         run: |
-          find android -name 'settings.gradle' -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' {} +
+          find android -name 'settings.gradle' -exec sed -i 's/id \"org.jetbrains.kotlin.android\" version \"[^"]*\"/id \"org.jetbrains.kotlin.android\" version \"1.9.24\"/g' {} +
           find android -name 'build.gradle' -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
 
       - name: Get Dependencies
