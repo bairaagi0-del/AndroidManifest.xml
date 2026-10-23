@@ -51,22 +51,24 @@ jobs:
       - name: Recreate Android Project Structure
         run: flutter create . --org com.rahulgupta --project-name speedracer
 
-      - name: Process Custom Logo & Generate Android Launcher Icons
+      - name: Process Uploaded Car Picture & Generate Android Launcher Icons
         run: |
           pip install Pillow
           python3 -c "
           import os, glob
           from PIL import Image
 
-          # Find uploaded logo image in repo
-          search_files = glob.glob('*.png') + glob.glob('*.jpg') + glob.glob('assets/*.png')
+          # Find the uploaded car racing picture
+          search_files = glob.glob('*.png') + glob.glob('*.jpg') + glob.glob('*.jpeg') + glob.glob('assets/*.png')
           source_img = None
           for f in search_files:
-              if any(k in f.lower() for k in ['red', 'bull', 'racing', 'logo', 'emblem', 'icon']):
+              if any(k in f.lower() for k in ['car', 'racing', 'emblem', 'red', 'bull', 'speed', '_2']):
                   source_img = f
                   break
           if not source_img and search_files:
               source_img = search_files[0]
+
+          print(f'Using source image for launcher icon: {source_img}')
 
           sizes = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
           for folder, size in sizes.items():
@@ -79,7 +81,7 @@ jobs:
                   img = Image.new('RGBA', (size, size), (10, 14, 26, 255))
               img.save(f'{d_path}/ic_launcher.png')
               img.save(f'{d_path}/ic_launcher_round.png')
-          print('Custom Red Bull F1 Logo applied successfully to all launcher icons!')
+          print('Car racing launcher icons generated successfully!')
           "
 
       - name: Fix Android Gradle Properties & Wrapper
@@ -134,7 +136,6 @@ jobs:
             bool _isBannerReady = false;
             RewardedAd? _rewardedAd;
             InterstitialAd? _interstitialAd;
-            bool _isRewardedReady = false;
 
             final String _realBannerId = 'ca-app-pub-1590363558146928/9630631281';
             final String _realInterstitialId = 'ca-app-pub-1590363558146928/7196039630';
@@ -178,7 +179,7 @@ jobs:
                   onAdFailedToLoad: (ad, err) {
                     ad.dispose();
                     setState(() { _isBannerReady = false; });
-                    Future.delayed(const Duration(seconds: 6), _loadBannerAd);
+                    Future.delayed(const Duration(seconds: 3), _loadBannerAd);
                   },
                 ),
               )..load();
@@ -190,7 +191,7 @@ jobs:
                 request: const AdRequest(),
                 adLoadCallback: InterstitialAdLoadCallback(
                   onAdLoaded: (ad) { _interstitialAd = ad; },
-                  onAdFailedToLoad: (error) { _interstitialAd = null; Future.delayed(const Duration(seconds: 6), _loadInterstitialAd); },
+                  onAdFailedToLoad: (error) { _interstitialAd = null; Future.delayed(const Duration(seconds: 3), _loadInterstitialAd); },
                 ),
               );
             }
@@ -213,15 +214,8 @@ jobs:
                 adUnitId: _realRewardedId,
                 request: const AdRequest(),
                 rewardedAdLoadCallback: RewardedAdLoadCallback(
-                  onAdLoaded: (ad) {
-                    _rewardedAd = ad;
-                    setState(() { _isRewardedReady = true; });
-                  },
-                  onAdFailedToLoad: (error) {
-                    _rewardedAd = null;
-                    setState(() { _isRewardedReady = false; });
-                    Future.delayed(const Duration(seconds: 5), _loadRewardedAd);
-                  },
+                  onAdLoaded: (ad) { _rewardedAd = ad; },
+                  onAdFailedToLoad: (error) { _rewardedAd = null; Future.delayed(const Duration(seconds: 3), _loadRewardedAd); },
                 ),
               );
             }
@@ -232,13 +226,11 @@ jobs:
                   onAdDismissedFullScreenContent: (ad) {
                     ad.dispose();
                     _rewardedAd = null;
-                    setState(() { _isRewardedReady = false; });
                     _loadRewardedAd();
                   },
                   onAdFailedToShowFullScreenContent: (ad, error) {
                     ad.dispose();
                     _rewardedAd = null;
-                    setState(() { _isRewardedReady = false; });
                     _loadRewardedAd();
                   },
                 );
@@ -417,7 +409,7 @@ jobs:
           <div id="customModal">
           <div class="bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl text-center max-w-sm w-full shadow-2xl">
           <div id="modalTitle" class="text-amber-400 font-black text-lg mb-2">SPONSORED REWARD AD</div>
-          <div id="modalMsg" class="text-slate-300 text-xs mb-3">Loading AdMob Rewarded Ad... Please wait.</div>
+          <div id="modalMsg" class="text-slate-300 text-xs mb-3">Loading AdMob Rewarded Ad from Google SDK...</div>
           <div class="flex gap-3 justify-center mt-3">
           <button id="modalCloseBtn" class="arcade-btn btn-red" onclick="closeModal()">✖ CLOSE</button>
           </div>
