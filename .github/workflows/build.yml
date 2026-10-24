@@ -31,7 +31,7 @@ jobs:
           name: watchearn
           description: TaskTube Watch and Earn Rewards App
           publish_to: 'none'
-          version: 1.2.2+5
+          version: 1.2.3+6
 
           environment:
             sdk: '>=3.0.0 <4.0.0'
@@ -82,10 +82,12 @@ jobs:
               img.save(f'{d_path}/ic_launcher_round.png')
           "
 
-      - name: Write Clean AndroidManifest.xml
+      - name: Write Fix AndroidManifest.xml with Tools Namespace
         run: |
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+              
               <uses-permission android:name="android.permission.INTERNET"/>
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
               <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
@@ -93,7 +95,8 @@ jobs:
               <application
                   android:label="TaskTube Watch & Earn"
                   android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher">
+                  android:icon="@mipmap/ic_launcher"
+                  tools:replace="android:label">
                   
                   <meta-data
                       android:name="com.google.android.gms.ads.APPLICATION_ID"
@@ -319,8 +322,8 @@ jobs:
                   onAdFailedToShowFullScreenContent: (ad, err) {
                     ad.dispose();
                     _rewardedAd = null;
-                    _controller.runJavaScript("if(window.onAdFailed) window.onAdFailed('Ad show nahi ho paya.');");
                     _loadRewardedAd();
+                    _controller.runJavaScript("if(window.onAdFailed) window.onAdFailed('Ad show nahi ho paya.');");
                   },
                 );
                 _rewardedAd!.show(onUserEarnedReward: (AdWithoutView ad, RewardItem reward) { rewardEarned = true; });
