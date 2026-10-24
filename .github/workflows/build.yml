@@ -477,4 +477,274 @@ jobs:
                 <div class="text-4xl mb-2">🎁</div>
                 <h3 class="text-lg font-black text-amber-400">REFER FRIENDS & EARN</h3>
                 <div class="bg-slate-900 border-2 border-dashed border-amber-400 rounded-2xl p-3 my-4">
-                  <div id="uiMyRefCode" class="text-2xl font-black text-amber
+                  <div id="uiMyRefCode" class="text-2xl font-black text-amber-300 tracking-widest">EARN0000</div>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="copyRefCode()" class="flex-1 bg-slate-800 text-white font-bold text-xs py-3 rounded-xl">📋 COPY</button>
+                  <button onclick="shareOnWhatsApp()" class="flex-1 emerald-gradient text-white font-black text-xs py-3 rounded-xl">📲 WHATSAPP</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="tabWallet" style="display:none;" class="flex flex-col gap-3">
+              <div class="glass-card p-5 flex flex-col gap-3">
+                <h3 class="text-base font-black text-emerald-400">🏦 WITHDRAW TO UPI</h3>
+                <p class="text-[11px] text-slate-400">Min: 1000 Coins (₹1.00)</p>
+                <input id="inpUpi" type="text" placeholder="yourname@upi" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+                <input id="inpWithdrawCoins" type="number" placeholder="Coins amount" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+                <button onclick="submitWithdrawal()" class="w-full gold-gradient text-slate-950 font-black py-3 rounded-xl text-sm">SUBMIT WITHDRAWAL</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="adTimerModal" style="display:none;" class="fixed inset-0 z-50 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center">
+            <div class="glass-card p-6 max-w-xs w-full border-2 border-emerald-400">
+              <h3 id="modalHeading" class="text-lg font-black text-white">Watching Ad</h3>
+              <div id="modalTimerCircle" class="w-24 h-24 rounded-full border-4 border-emerald-400 flex items-center justify-center mx-auto my-4 text-3xl font-black text-amber-300">30s</div>
+              <p id="modalStatusText" class="text-xs text-slate-300 mb-4">Ad complete hone dein...</p>
+              <button id="modalCloseBtn" onclick="closeAdModal()" style="display:none;" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs">CLOSE</button>
+            </div>
+          </div>
+
+          <script>
+            const firebaseConfig = {
+              apiKey: "AIzaSyD-PlaceholderKeyForDemo",
+              authDomain: "tasktube-earn.firebaseapp.com",
+              projectId: "tasktube-earn",
+              storageBucket: "tasktube-earn.appspot.com",
+              messagingSenderId: "123456789",
+              appId: "1:123:web:abc"
+            };
+            try {
+              firebase.initializeApp(firebaseConfig);
+              var db = firebase.firestore();
+            } catch(e) { console.log('Firebase offline mode'); }
+
+            let userProfile = JSON.parse(localStorage.getItem('watchearn_user_v3') || 'null');
+            let coins = parseInt(localStorage.getItem('watchearn_coins_v3') || '0');
+            let adsWatched = parseInt(localStorage.getItem('watchearn_ads_v3') || '0');
+            let referralsCount = parseInt(localStorage.getItem('watchearn_refs_v3') || '0');
+            let generatedOtp = null, activeTaskSeconds = 30, timerInterval = null, adSdkVerified = false, timerFinished = false;
+            let currentWheelAngle = 0, pendingSpinAction = false;
+
+            function saveState() {
+              localStorage.setItem('watchearn_user_v3', JSON.stringify(userProfile));
+              localStorage.setItem('watchearn_coins_v3', coins.toString());
+              localStorage.setItem('watchearn_ads_v3', adsWatched.toString());
+              localStorage.setItem('watchearn_refs_v3', referralsCount.toString());
+              renderDashboard();
+
+              if (window.db && userProfile) {
+                db.collection('users').doc(userProfile.phone).set({
+                  name: userProfile.name, phone: userProfile.phone, gmail: userProfile.gmail,
+                  coins: coins, adsWatched: adsWatched, lastUpdated: new Date()
+                }, { merge: true }).catch(err => console.log(err));
+              }
+            }
+
+            window.handleAuthStep = function() {
+              const name = document.getElementById('inpName').value.trim();
+              const phone = document.getElementById('inpPhone').value.trim();
+              const gmail = document.getElementById('inpGmail').value.trim().toLowerCase();
+              if (name.length < 2 || !/^[6-9]\d{9}$/.test(phone) || !gmail.endsWith('@gmail.com')) {
+                const err = document.getElementById('authError');
+                err.innerText = 'Sahi details bharein!'; err.style.display = 'block'; return;
+              }
+              if (!generatedOtp) {
+                generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+                document.getElementById('otpBox').style.display = 'block';
+                document.getElementById('otpHint').innerText = 'OTP: ' + generatedOtp;
+                document.getElementById('authBtn').innerText = '✔ VERIFY OTP'; return;
+              }
+              if (document.getElementById('inpOtp').value.trim() !== generatedOtp) {
+                alert('Galat OTP!'); return;
+              }
+              userProfile = { name, phone, gmail, refCode: 'EARN' + phone.slice(-4) };
+              if (coins === 0) coins += 20;
+              saveState();
+              document.getElementById('authScreen').style.display = 'none';
+              document.getElementById('mainApp').style.display = 'flex';
+              renderDashboard();
+              drawWheel();
+            };
+
+            function renderDashboard() {
+              if (!userProfile) return;
+              document.getElementById('uiUserName').innerText = userProfile.name;
+              document.getElementById('uiUserContact').innerText = '+91 ' + userProfile.phone + ' • ' + userProfile.gmail;
+              document.getElementById('uiCoins').innerText = coins;
+              document.getElementById('uiRupees').innerText = (coins * 0.001).toFixed(3);
+              document.getElementById('uiMyRefCode').innerText = userProfile.refCode;
+            }
+
+            window.switchTab = function(tab) {
+              ['earn', 'spin', 'refer', 'wallet'].forEach(t => {
+                document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = (t === tab) ? 'flex' : 'none';
+                document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1)).className = 'py-2 rounded-xl font-black text-[11px] ' + (t === tab ? 'emerald-gradient text-white' : 'text-slate-400');
+              });
+              if (tab === 'spin') drawWheel();
+            };
+
+            const wheelSlices = [
+              { label: '0 Coins', value: 0, color: '#ef4444' },
+              { label: '1 Coin', value: 1, color: '#f59e0b' },
+              { label: '0 Coins', value: 0, color: '#3b82f6' },
+              { label: '2 Coins', value: 2, color: '#10b981' },
+              { label: '0 Coins', value: 0, color: '#8b5cf6' },
+              { label: '5 Coins', value: 5, color: '#ec4899' }
+            ];
+
+            function drawWheel() {
+              const canvas = document.getElementById('wheelCanvas');
+              if (!canvas) return;
+              const ctx = canvas.getContext('2d');
+              const cx = canvas.width / 2, cy = canvas.height / 2, r = canvas.width / 2 - 10;
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              const arc = (2 * Math.PI) / wheelSlices.length;
+              wheelSlices.forEach((slice, i) => {
+                ctx.beginPath(); ctx.fillStyle = slice.color;
+                ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, i * arc, (i + 1) * arc);
+                ctx.lineTo(cx, cy); ctx.fill(); ctx.stroke();
+                ctx.save(); ctx.translate(cx, cy); ctx.rotate(i * arc + arc / 2);
+                ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+                ctx.fillText(slice.label, r - 15, 5); ctx.restore();
+              });
+            }
+
+            window.triggerSpinWheel = function() {
+              pendingSpinAction = true;
+              document.getElementById('spinResultMsg').innerText = 'Ad load ho raha hai...';
+              if (window.AdMobBridge) { try { window.AdMobBridge.postMessage('showSpinAd'); } catch (e) {} }
+              else { window.onSpinAdClosed(); }
+            };
+
+            window.onSpinAdClosed = function() {
+              if (!pendingSpinAction) return;
+              pendingSpinAction = false;
+              let rand = Math.random();
+              let targetIndex = 0;
+              if (rand < 0.45) targetIndex = 0;
+              else if (rand < 0.70) targetIndex = 2;
+              else if (rand < 0.85) targetIndex = 1;
+              else if (rand < 0.95) targetIndex = 3;
+              else targetIndex = 5;
+
+              const arcDeg = 360 / wheelSlices.length;
+              const angle = (5 * 360) + (wheelSlices.length - targetIndex) * arcDeg - arcDeg / 2;
+              currentWheelAngle += angle;
+              document.getElementById('wheelCanvas').style.transform = 'rotate(' + currentWheelAngle + 'deg)';
+
+              setTimeout(() => {
+                let won = wheelSlices[targetIndex].value;
+                coins += won; saveState();
+                document.getElementById('spinResultMsg').innerText = won > 0 ? '🎉 Mubarak ho! +' + won + ' Coins!' : '😢 0 Coins! Dobara koshish karein.';
+              }, 4000);
+            };
+
+            window.startAdWatchTask = function(seconds) {
+              activeTaskSeconds = seconds; adSdkVerified = false; timerFinished = false;
+              document.getElementById('adTimerModal').style.display = 'flex';
+              document.getElementById('modalHeading').innerText = 'Watching ' + seconds + 's Ad';
+              let remaining = seconds;
+              document.getElementById('modalTimerCircle').innerText = remaining + 's';
+              if (timerInterval) clearInterval(timerInterval);
+              timerInterval = setInterval(() => {
+                remaining--;
+                if (remaining > 0) { document.getElementById('modalTimerCircle').innerText = remaining + 's'; }
+                else { clearInterval(timerInterval); timerFinished = true; tryFinalizeAdReward(); }
+              }, 1000);
+              if (window.AdMobBridge) { try { window.AdMobBridge.postMessage(seconds === 60 ? 'showRewarded60' : 'showRewarded30'); } catch (e) {} }
+            };
+
+            window.onAdCompletedSuccess = function() { adSdkVerified = true; tryFinalizeAdReward(); };
+            function tryFinalizeAdReward() {
+              if (adSdkVerified && timerFinished) {
+                let earned = activeTaskSeconds === 60 ? 25 : 10;
+                coins += earned; adsWatched += 1; saveState();
+                document.getElementById('modalStatusText').innerText = '🎉 +' + earned + ' Coins added!';
+                document.getElementById('modalCloseBtn').style.display = 'block';
+              }
+            }
+            window.onAdFailed = function(r) { clearInterval(timerInterval); document.getElementById('modalStatusText').innerText = r; document.getElementById('modalCloseBtn').style.display = 'block'; };
+            window.closeAdModal = function() { document.getElementById('adTimerModal').style.display = 'none'; };
+            window.copyRefCode = function() { navigator.clipboard?.writeText(userProfile.refCode); alert('Copied!'); };
+            window.shareOnWhatsApp = function() { window.open('https://wa.me/?text=' + encodeURIComponent('Join TaskTube! Code: ' + userProfile.refCode), '_blank'); };
+
+            window.submitWithdrawal = function() {
+              const upi = document.getElementById('inpUpi').value.trim();
+              const req = parseInt(document.getElementById('inpWithdrawCoins').value || '0');
+              if (upi.length < 5 || req < 1000 || req > coins) { alert('Sahi details aur min 1000 coins dalein!'); return; }
+              coins -= req; saveState();
+              if (window.db && userProfile) {
+                db.collection('withdrawals').add({
+                  phone: userProfile.phone, name: userProfile.name, upi: upi, coins: req, rupees: req * 0.001,
+                  status: 'Pending', timestamp: new Date()
+                }).catch(e => console.log(e));
+              }
+              alert('✅ Withdrawal request successfully sent to Admin database!');
+            };
+
+            if (userProfile) { document.getElementById('authScreen').style.display = 'none'; document.getElementById('mainApp').style.display = 'flex'; renderDashboard(); }
+          </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Configure Gradle & SDK 34
+        run: |
+          cat << 'EOF' > android/app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'kotlin-android'
+              id 'dev.flutter.flutter-gradle-plugin'
+          }
+          android {
+              namespace = 'com.rahulgupta.watchearn'
+              compileSdk = 34
+              ndkVersion = flutter.ndkVersion
+              compileOptions { sourceCompatibility = JavaVersion.VERSION_1_8; targetCompatibility = JavaVersion.VERSION_1_8 }
+              kotlinOptions { jvmTarget = '1.8' }
+              defaultConfig { applicationId = 'com.rahulgupta.watchearn'; minSdk = 24; targetSdk = 34; versionCode = 5; versionName = '1.2.2'; multiDexEnabled = true }
+              buildTypes { release { signingConfig = signingConfigs.debug; minifyEnabled false; shrinkResources false } }
+          }
+          flutter { source = '../..' }
+          EOF
+
+      - name: Configure App Name & AdMob in AndroidManifest (Safe Mode)
+        run: |
+          python3 -c "
+          p = 'android/app/src/main/AndroidManifest.xml'
+          with open(p, 'r') as f:
+              content = f.read()
+
+          content = content.replace('android:label=\"watchearn\"', 'android:label=\"TaskTube Watch & Earn\"')
+
+          if 'android:screenOrientation' not in content:
+              content = content.replace('<activity', '<activity android:screenOrientation=\"portrait\"', 1)
+
+          if 'android.permission.INTERNET' not in content:
+              content = content.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\"/>\n    <application')
+
+          if 'com.google.android.gms.ads.APPLICATION_ID' not in content:
+              content = content.replace('</application>', '    <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"ca-app-pub-1590363558146928~3904943143\"/>\n    </application>')
+
+          with open(p, 'w') as f:
+              f.write(content)
+          "
+
+      - name: Fix Kotlin & Gradle Versions
+        run: |
+          find android -name 'settings.gradle' -exec sed -i 's/id \"org.jetbrains.kotlin.android\" version \"[^"]*\"/id \"org.jetbrains.kotlin.android\" version \"1.9.24\"/g' {} +
+          find android -name 'build.gradle' -exec sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/g" {} +
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-and-earn-firebase-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
